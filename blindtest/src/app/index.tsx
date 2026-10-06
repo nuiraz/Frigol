@@ -68,9 +68,14 @@ export default function Home() {
           <Pressable onPress={() => router.push('/share')} style={styles.iconButton}>
             <Text style={styles.iconText}>📱 QR code</Text>
           </Pressable>
-          <Pressable onPress={() => router.push('/admin')} style={styles.iconButton}>
-            <Text style={styles.iconText}>🔒 Admin</Text>
-          </Pressable>
+          <View style={styles.topRight}>
+            <Pressable onPress={() => router.push('/admin/import')} style={styles.iconButton}>
+              <Text style={styles.iconText}>📥 Importer</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push('/admin')} style={styles.iconButton}>
+              <Text style={styles.iconText}>🔒 Admin</Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.hero}>
@@ -160,6 +165,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 14, width: '100%', maxWidth: 720, alignSelf: 'center' },
   topBar: { flexDirection: 'row', justifyContent: 'space-between' },
+  topRight: { flexDirection: 'row', gap: 8 },
   iconButton: {
     paddingVertical: 8,
     paddingHorizontal: 14,

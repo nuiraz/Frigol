@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -11,6 +11,7 @@ const EMOJIS = ['🎵', '🎸', '🎤', '📼', '💿', '🎹', '🥁', '🎻', 
 
 export default function AdminHome() {
   const { data, addCategory } = useStore();
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const [unlocked, setUnlocked] = useState(adminSession.isUnlocked());
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -22,7 +23,8 @@ export default function AdminHome() {
     const tryUnlock = () => {
       if (pin === data.settings.adminPin) {
         adminSession.unlock();
-        setUnlocked(true);
+        if (next) router.replace(next as Href);
+        else setUnlocked(true);
       } else {
         setPinError(true);
         setPin('');
@@ -63,8 +65,9 @@ export default function AdminHome() {
 
   return (
     <Screen>
+      <Button label="📥  Importer une playlist YouTube Music" onPress={() => router.push('/admin/import')} />
       <Card>
-        <Label>➕ Nouvelle catégorie</Label>
+        <Label>➕ Nouvelle catégorie (vide)</Label>
         <Input value={name} onChangeText={setName} placeholder="ex : Rap FR, Années 90, Dessins animés…" />
         <Row>
           {EMOJIS.map((e) => (

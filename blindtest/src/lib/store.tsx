@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { createDefaultData } from './seed';
-import type { AppData, BestScore, Category, Settings, Track } from './types';
+import type { AppData, BestScore, Category, PlaylistSource, Settings, Track } from './types';
 
 const STORAGE_KEY = 'blindtest:data:v1';
 
@@ -15,7 +15,10 @@ type Store = {
   /** Ajoute des pistes en ignorant les doublons ; renvoie le nombre réellement ajouté. */
   addTracks: (categoryId: string, tracks: Track[]) => number;
   updateTrack: (categoryId: string, trackId: string, patch: Partial<Track>) => void;
+  /** Mémorise (ou met à jour) la playlist d'origine d'une catégorie. */
+  addSource: (categoryId: string, source: PlaylistSource) => void;
   deleteTrack: (categoryId: string, trackId: string) => void;
+  moveTrack: (fromId: string, toId: string, trackId: string) => void;
   markBlocked: (trackId: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
   submitScore: (key: string, score: BestScore) => boolean;
@@ -119,11 +122,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...c,
           tracks: c.tracks.map((t) => (t.id === trackId ? { ...t, ...patch } : t)),
         })),
+      addSource: (categoryId, source) =>
+        mapCategory(categoryId, (c) => ({
+          ...c,
+          sources: [...c.sources.filter((x) => x.listId !== source.listId), source],
+        })),
       deleteTrack: (categoryId, trackId) =>
         mapCategory(categoryId, (c) => ({
           ...c,
           tracks: c.tracks.filter((t) => t.id !== trackId),
         })),
+      moveTrack: (fromId, toId, trackId) =>
+        setData((d) => {
+          const track = d.categories.find((c) => c.id === fromId)?.tracks.find((t) => t.id === trackId);
+          if (!track || fromId === toId) return d;
+          return {
+            ...d,
+            categories: d.categories.map((c) => {
+              if (c.id === fromId) return { ...c, tracks: c.tracks.filter((t) => t.id !== trackId) };
+              if (c.id === toId && !c.tracks.some((t) => t.id === trackId))
+                return { ...c, tracks: [...c.tracks, track] };
+              return c;
+            }),
+          };
+        }),
       markBlocked: (trackId) =>
         setData((d) => ({
           ...d,

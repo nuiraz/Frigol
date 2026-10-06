@@ -155,3 +155,19 @@ export async function fetchPlaylistWithApi(listId: string, apiKey: string) {
 
 /** Codes d'erreur signifiant que la vidéo elle-même est introuvable ou interdite d'intégration. */
 export const BLOCKED_ERRORS = [100, 101, 150];
+
+/** Titre d'une playlist sans clé d'API (oEmbed). */
+export async function fetchPlaylistTitle(listId: string): Promise<string | null> {
+  const url = encodeURIComponent(`https://www.youtube.com/playlist?list=${listId}`);
+  const endpoints = [`https://www.youtube.com/oembed?format=json&url=${url}`];
+  if (Platform.OS === 'web') endpoints.push(`https://noembed.com/embed?url=${url}`);
+  for (const e of endpoints) {
+    try {
+      const res = await fetch(e);
+      if (!res.ok) continue;
+      const json = (await res.json()) as { title?: string };
+      if (json.title) return json.title;
+    } catch {}
+  }
+  return null;
+}

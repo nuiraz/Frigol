@@ -10,16 +10,9 @@ import { useAdminGuard } from '@/lib/admin-session';
 import { confirmAction, notify } from '@/lib/dialogs';
 import { useStore } from '@/lib/store';
 import { CATEGORY_COLORS, colors } from '@/lib/theme';
-import type { PlaylistSource, Track } from '@/lib/types';
-import {
-  BLOCKED_ERRORS,
-  fetchPlaylistWithApi,
-  parsePlaylistId,
-  parseVideoId,
-  thumbnailUrl,
-  trackFromVideoId,
-  tracksFromVideoIds,
-} from '@/lib/youtube';
+import type { Category, PlaylistSource, Track } from '@/lib/types';
+import { readYouTubeLink } from '@/lib/importer';
+import { BLOCKED_ERRORS, thumbnailUrl } from '@/lib/youtube';
 
 const PAGE = 40;
 
@@ -82,47 +75,24 @@ export default function CategoryEditor() {
   }
 
   async function importUrl() {
-    const input = url.trim();
-    if (!input) return;
-    const listId = parsePlaylistId(input);
-    const videoId = parseVideoId(input);
+    if (!url.trim()) return;
     setBusy(true);
     try {
-      if (listId) {
-        let title = 'Playlist';
-        let tracks: Track[];
-        const apiKey = store.data.settings.youtubeApiKey.trim();
-        if (apiKey) {
-          setProgress('Lecture de la playlist via l’API YouTube…');
-          ({ title, tracks } = await fetchPlaylistWithApi(listId, apiKey));
-        } else {
-          setProgress('Lecture de la playlist…');
-          const ids = [...new Set(await idsFromPlayer(listId))];
-          if (!ids.length) throw new Error('Playlist vide, privée ou introuvable. Vérifie qu’elle est publique.');
-          tracks = await tracksFromVideoIds(ids, (done) =>
-            setProgress(`Récupération des titres : ${done}/${ids.length}`),
-          );
-          title = `Playlist (${ids.length} titres)`;
-        }
-        const added = store.addTracks(category!.id, tracks);
-        store.updateCategory(category!.id, {
-          sources: [
-            ...category!.sources.filter((s) => s.listId !== listId),
-            makeSource(listId, input, title, tracks.length),
-          ],
-        });
-        notify('Import terminé', `${added} morceau(x) ajouté(s) sur ${tracks.length} trouvé(s).`);
-        setUrl('');
-      } else if (videoId) {
-        setProgress('Récupération du titre…');
-        const track = await trackFromVideoId(videoId);
-        const added = store.addTracks(category!.id, [track]);
-        if (!added) notify('Déjà présent', 'Ce morceau est déjà dans la catégorie.');
-        else if (!track.title) setEditing(videoId);
-        setUrl('');
-      } else {
-        notify('Lien non reconnu', 'Colle un lien de playlist ou de morceau YouTube / YouTube Music.');
+      const r = await readYouTubeLink(url, {
+        apiKey: store.data.settings.youtubeApiKey,
+        onProgress: setProgress,
+        idsFromPlayer,
+      });
+      const added = store.addTracks(category!.id, r.tracks);
+      if (r.kind === 'playlist') {
+        store.addSource(category!.id, makeSource(r.listId, r.url, r.title, r.tracks.length));
+        notify('Import terminé', `${added} morceau(x) ajouté(s) sur ${r.tracks.length} trouvé(s).`);
+      } else if (!added) {
+        notify('Déjà présent', 'Ce morceau est déjà dans la catégorie.');
+      } else if (!r.tracks[0].title) {
+        setEditing(r.tracks[0].id);
       }
+      setUrl('');
     } catch (err) {
       notify('Erreur', err instanceof Error ? err.message : String(err));
     } finally {
@@ -286,6 +256,8 @@ export default function CategoryEditor() {
             onPreview={() => preview(t)}
             onChange={(patch) => store.updateTrack(category.id, t.id, patch)}
             onDelete={() => store.deleteTrack(category.id, t.id)}
+            moveTargets={store.data.categories.filter((c) => c.id !== category.id)}
+            onMove={(toId) => store.moveTrack(category.id, toId, t.id)}
           />
         ))}
         {filtered.length > limit && (
@@ -312,6 +284,8 @@ function TrackRow({
   onPreview,
   onChange,
   onDelete,
+  moveTargets,
+  onMove,
 }: {
   track: Track;
   expanded: boolean;
@@ -320,6 +294,8 @@ function TrackRow({
   onPreview: () => void;
   onChange: (patch: Partial<Track>) => void;
   onDelete: () => void;
+  moveTargets: Category[];
+  onMove: (categoryId: string) => void;
 }) {
   const incomplete = !track.title || !track.artist;
   return (
@@ -364,6 +340,16 @@ function TrackRow({
             {track.blocked && <Chip label="Réessayer (débloquer)" onPress={() => onChange({ blocked: false })} />}
             <Button label="Supprimer" small variant="danger" onPress={onDelete} />
           </Row>
+          {moveTargets.length > 0 && (
+            <>
+              <Muted>Déplacer vers :</Muted>
+              <Row>
+                {moveTargets.map((c) => (
+                  <Chip key={c.id} label={`${c.emoji} ${c.name}`} color={c.color} onPress={() => onMove(c.id)} />
+                ))}
+              </Row>
+            </>
+          )}
         </View>
       )}
     </View>

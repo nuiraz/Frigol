@@ -38,6 +38,15 @@ Scanne le QR code avec **Expo Go** (Android / iOS), ou appuie sur `w` pour la ve
 
 Les morceaux sont toujours joués dans un ordre aléatoire. Départ de l’extrait au choix : **début du morceau** (par défaut) ou **moment aléatoire** (entre 25 % et 65 %). Un départ fixé dans l’admin est prioritaire. Lancement automatique (3, 2, 1…) ou au bouton ▶. Le chrono ne démarre qu’une fois le son réellement lancé. Bonus de rapidité, bonus de série 🔥, pénalité par réécoute. La saisie libre tolère accents et fautes de frappe. Meilleurs scores sauvegardés par catégorie et niveau.
 
+## 📥 Importer une playlist YouTube Music
+
+Accueil → **📥 Importer** (code admin demandé la première fois) :
+
+1. Dans YouTube Music, ouvre la playlist → **Partager** → **Copier le lien**, puis colle-le.
+2. **Lire la playlist** : l’app affiche le nom de la playlist et les morceaux trouvés.
+3. Choisis la **catégorie** : une catégorie existante, ou **Nouvelle** (nom pré-rempli avec le nom de la playlist, emoji et couleur au choix).
+4. **Importer** — c’est prêt à jouer. Tu peux ensuite corriger les titres ou déplacer un morceau vers une autre catégorie.
+
 ## Administration
 
 Accueil → 🔒 Administration (code par défaut **1234**, à changer dans Réglages).
