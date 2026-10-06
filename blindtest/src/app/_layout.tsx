@@ -31,6 +31,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="setup" options={{ title: 'Nouvelle partie' }} />
           <Stack.Screen name="game" options={{ title: 'Blind Test', gestureEnabled: false }} />
+          <Stack.Screen name="share" options={{ title: 'Partager' }} />
           <Stack.Screen name="admin/index" options={{ title: 'Administration' }} />
           <Stack.Screen name="admin/category/[id]" options={{ title: 'Catégorie' }} />
           <Stack.Screen name="admin/settings" options={{ title: 'Réglages' }} />

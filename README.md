@@ -32,4 +32,4 @@ Ouvre simplement `index.html` dans ton navigateur — aucune installation néces
 
 ## 🎧 Blind Test (application Expo)
 
-Le dossier [`blindtest/`](blindtest/) contient une application mobile de blind test (Expo / React Native) alimentée par des playlists YouTube Music, avec page d’administration. Voir [blindtest/README.md](blindtest/README.md).
+Le dossier [`blindtest/`](blindtest/) contient une application mobile de blind test (Expo / React Native) alimentée par des playlists YouTube Music, avec page d’administration. 👉 **Jouer : https://nuiraz.github.io/jeuxenigme/app/** — détails dans [blindtest/README.md](blindtest/README.md).

@@ -12,9 +12,33 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-import { colors, radius } from '@/lib/theme';
+import { colors, radius, shade } from '@/lib/theme';
+
+/** Halos colorés en fond d'écran. */
+export function Backdrop({ color = colors.primary, color2 = colors.violet }: { color?: string; color2?: string }) {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Svg width="100%" height="100%">
+        <Defs>
+          <RadialGradient id="g1" cx="90%" cy="0%" r="65%">
+            <Stop offset="0" stopColor={color} stopOpacity={0.28} />
+            <Stop offset="1" stopColor={color} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="g2" cx="0%" cy="100%" r="70%">
+            <Stop offset="0" stopColor={color2} stopOpacity={0.22} />
+            <Stop offset="1" stopColor={color2} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#g1)" />
+        <Rect width="100%" height="100%" fill="url(#g2)" />
+      </Svg>
+    </View>
+  );
+}
 
 export function Screen({
   children,
@@ -27,6 +51,7 @@ export function Screen({
 }) {
   return (
     <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
+      <Backdrop />
       {scroll ? (
         <ScrollView contentContainerStyle={[styles.content, contentStyle]} keyboardShouldPersistTaps="handled">
           {children}
@@ -50,29 +75,40 @@ type ButtonProps = {
 };
 
 export function Button({ label, onPress, variant = 'primary', color, disabled, loading, small, style }: ButtonProps) {
-  const bg =
-    variant === 'primary'
-      ? (color ?? colors.primary)
-      : variant === 'danger'
-        ? colors.danger
-        : variant === 'secondary'
-          ? colors.surfaceAlt
-          : 'transparent';
+  const base = variant === 'primary' ? (color ?? colors.primary) : variant === 'danger' ? colors.danger : null;
+  const content = loading ? (
+    <ActivityIndicator color={colors.text} />
+  ) : (
+    <Text style={[styles.buttonText, small && styles.buttonTextSmall]}>{label}</Text>
+  );
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
-        styles.button,
-        small && styles.buttonSmall,
-        { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.75 : 1 },
-        variant === 'ghost' && styles.buttonGhost,
+        styles.buttonOuter,
+        small && styles.buttonOuterSmall,
+        { opacity: disabled ? 0.4 : pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+        base && !small && { boxShadow: `0 6px 18px ${base}55` },
         style,
       ]}>
-      {loading ? (
-        <ActivityIndicator color={colors.text} />
+      {base ? (
+        <LinearGradient
+          colors={[base, shade(base)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.button, small && styles.buttonSmall]}>
+          {content}
+        </LinearGradient>
       ) : (
-        <Text style={[styles.buttonText, small && styles.buttonTextSmall]}>{label}</Text>
+        <View
+          style={[
+            styles.button,
+            small && styles.buttonSmall,
+            variant === 'secondary' ? { backgroundColor: colors.surfaceAlt } : styles.buttonGhost,
+          ]}>
+          {content}
+        </View>
       )}
     </Pressable>
   );
@@ -130,6 +166,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   fill: { flex: 1 },
+  buttonOuter: { borderRadius: radius.md },
+  buttonOuterSmall: { borderRadius: radius.sm },
   button: {
     paddingVertical: 15,
     paddingHorizontal: 20,

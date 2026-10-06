@@ -2,10 +2,10 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Equalizer } from '@/components/equalizer';
 import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/components/ui';
+import { Vinyl } from '@/components/vinyl';
 import { YouTubePlayer } from '@/components/youtube-player';
 import type { PlayerEvent, PlayerHandle } from '@/components/youtube-player.types';
 import {
@@ -23,7 +23,7 @@ import { colors } from '@/lib/theme';
 import type { Track } from '@/lib/types';
 import { BLOCKED_ERRORS, thumbnailUrl } from '@/lib/youtube';
 
-type Phase = 'loading' | 'ready' | 'listening' | 'answering' | 'reveal' | 'finished';
+type Phase = 'loading' | 'countdown' | 'ready' | 'listening' | 'answering' | 'reveal' | 'finished';
 
 type RoundResult = {
   track: Track;
@@ -34,6 +34,16 @@ type RoundResult = {
 };
 
 const REVEAL_SECONDS = 12;
+const CHOICE_COLORS = [colors.primary, colors.secondary, colors.warning, colors.violet, colors.success, colors.danger];
+
+/** Petite animation d'apparition (rejouée à chaque changement de `key`). */
+function Pop({ children, style }: { children: React.ReactNode; style?: object }) {
+  const [scale] = useState(() => new Animated.Value(0.4));
+  useEffect(() => {
+    Animated.spring(scale, { toValue: 1, friction: 5, tension: 160, useNativeDriver: true }).start();
+  }, [scale]);
+  return <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>;
+}
 
 function feedback(type: Haptics.NotificationFeedbackType) {
   if (Platform.OS !== 'web') Haptics.notificationAsync(type).catch(() => {});
@@ -47,12 +57,17 @@ export default function Game() {
     answer: 'qcm' | 'texte' | 'soiree';
     rounds: string;
     players: string;
+    start?: string;
+    auto?: string;
   }>();
   const store = useStore();
   const difficulty = getDifficulty(params.difficulty);
   const target: Target = params.target ?? 'titre';
   const answerMode = params.answer ?? difficulty.answerMode;
   const party = answerMode === 'soiree';
+  // Départ de l'extrait : début du morceau par défaut, ou moment aléatoire.
+  const startMode = difficulty.startMode === 'intro' || params.start !== 'aleatoire' ? 'intro' : 'random';
+  const autoStart = params.auto !== '0';
   const players = useMemo(() => (params.players ? params.players.split('|').filter(Boolean) : []), [params.players]);
 
   // Pool figé au lancement de la partie.
@@ -83,6 +98,8 @@ export default function Game() {
   const [streak, setStreak] = useState(0);
   const [skipped, setSkipped] = useState(0);
   const [saved, setSaved] = useState<boolean | null>(null);
+  const [countdown, setCountdown] = useState(3);
+  const [stalled, setStalled] = useState(false);
 
   const track = queue[cursor] as Track | undefined;
   const round = results.length + 1;
@@ -96,8 +113,26 @@ export default function Game() {
   // Prépare chaque nouveau morceau.
   useEffect(() => {
     if (phase !== 'loading' || !track) return;
-    player.current?.prepare(track.id, track.start != null ? 'fixed' : difficulty.startMode, track.start);
-  }, [track, phase, difficulty.startMode]);
+    player.current?.prepare(track.id, track.start != null ? 'fixed' : startMode, track.start);
+  }, [track, phase, startMode]);
+
+  // Compte à rebours 3, 2, 1 avant le lancement automatique.
+  useEffect(() => {
+    if (phase !== 'countdown') return;
+    const id = setTimeout(() => {
+      if (countdown <= 1) startListening();
+      else setCountdown(countdown - 1);
+    }, 750);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, countdown]);
+
+  // Si le son ne démarre pas (navigateur qui bloque la lecture auto), on propose un bouton.
+  useEffect(() => {
+    if (phase !== 'listening' || deadline != null) return;
+    const id = setTimeout(() => setStalled(true), 3500);
+    return () => clearTimeout(id);
+  }, [phase, deadline]);
 
   // Chronomètre de réponse (pas de chrono en mode soirée).
   useEffect(() => {
@@ -119,12 +154,17 @@ export default function Game() {
   function onPlayerEvent(e: PlayerEvent) {
     if (e.type === 'prepared' && phase === 'loading') {
       setStart(e.start);
-      setPhase('ready');
+      setCountdown(3);
+      setPhase(autoStart ? 'countdown' : 'ready');
     } else if (e.type === 'segmentStart' && phase === 'listening' && deadline == null) {
+      setStalled(false);
       setDeadline(Date.now() + difficulty.answerTime * 1000);
     } else if (e.type === 'segmentEnd' && phase === 'listening') {
       setPhase('answering');
-    } else if (e.type === 'error' && (phase === 'loading' || phase === 'ready' || phase === 'listening')) {
+    } else if (
+      e.type === 'error' &&
+      (phase === 'loading' || phase === 'countdown' || phase === 'ready' || phase === 'listening')
+    ) {
       // Morceau illisible : on le saute sans compter la manche.
       if (track && typeof e.code === 'number' && BLOCKED_ERRORS.includes(e.code)) store.markBlocked(track.id);
       setSkipped((n) => n + 1);
@@ -132,10 +172,15 @@ export default function Game() {
     }
   }
 
+  function startListening() {
+    setStalled(false);
+    setPhase('listening');
+    player.current?.segment(difficulty.snippet, start);
+  }
+
   function listen() {
-    if (phase === 'ready') {
-      setPhase('listening');
-      player.current?.segment(difficulty.snippet, start);
+    if (phase === 'ready' || phase === 'countdown') {
+      startListening();
     } else if (phase === 'answering' && replaysUsed < difficulty.replays) {
       setReplaysUsed((n) => n + 1);
       setPhase('listening');
@@ -197,6 +242,7 @@ export default function Game() {
     setWrongTry(false);
     setPicked(null);
     setWinners([]);
+    setStalled(false);
   }
 
   function revealParty() {
@@ -254,19 +300,39 @@ export default function Game() {
 
       {phase !== 'reveal' ? (
         <Card style={styles.stage}>
-          <Equalizer active={listening} color={difficulty.color} />
+          <View style={styles.vinylBox}>
+            <Vinyl
+              active={listening && deadline != null}
+              color={difficulty.color}
+              size={190}
+              label={phase === 'countdown' ? undefined : difficulty.emoji}
+            />
+            {phase === 'countdown' && (
+              <Pop key={countdown} style={styles.overlay}>
+                <Text style={[styles.countdown, { textShadowColor: difficulty.color }]}>{countdown}</Text>
+              </Pop>
+            )}
+            {(phase === 'ready' || (listening && stalled)) && (
+              <Pressable
+                onPress={listening ? startListening : listen}
+                style={[styles.overlay, styles.playButton, { backgroundColor: difficulty.color }]}>
+                <Text style={styles.playIcon}>▶</Text>
+              </Pressable>
+            )}
+          </View>
           {phase === 'loading' && <Muted>Chargement du morceau…</Muted>}
-          {phase === 'ready' && (
-            <Pressable onPress={listen} style={[styles.playButton, { backgroundColor: difficulty.color }]}>
-              <Text style={styles.playIcon}>▶</Text>
-            </Pressable>
-          )}
+          {phase === 'countdown' && <Muted>Prépare-toi…</Muted>}
           {phase === 'ready' && (
             <Muted>
               {difficulty.snippet === 1 ? 'Une seule seconde… concentre-toi !' : `Extrait de ${difficulty.snippet} s`}
             </Muted>
           )}
-          {listening && <Text style={styles.listening}>🎶 Écoute…</Text>}
+          {listening && (
+            <Text style={styles.listening}>{stalled ? 'Appuie sur ▶ pour lancer le son' : '🎶 Écoute…'}</Text>
+          )}
+          {!party && deadline != null && (
+            <Text style={[styles.seconds, timeLeft < 5 && { color: colors.danger }]}>⏱ {Math.ceil(timeLeft)} s</Text>
+          )}
           {phase === 'answering' && (
             <Button
               label={canReplay ? `🔁 Réécouter (${difficulty.replays - replaysUsed})` : 'Plus de réécoute'}
@@ -284,28 +350,30 @@ export default function Game() {
             <Text style={styles.revealTitle}>{track.title}</Text>
             <Text style={styles.revealArtist}>{track.artist}</Text>
             {!party && lastResult && (
-              <Text
-                style={[
-                  styles.verdict,
-                  {
-                    color: lastResult.correct ? colors.success : colors.danger,
-                  },
-                ]}>
-                {lastResult.correct
-                  ? `✅ Bravo ! +${lastResult.points} pts${streak > 1 ? `  🔥 x${streak}` : ''}`
-                  : lastResult.answer
-                    ? '❌ Raté !'
-                    : '⏱️ Temps écoulé'}
-              </Text>
+              <Pop>
+                <Text
+                  style={[
+                    styles.verdict,
+                    {
+                      color: lastResult.correct ? colors.success : colors.danger,
+                    },
+                  ]}>
+                  {lastResult.correct
+                    ? `✅ Bravo ! +${lastResult.points} pts${streak > 1 ? `  🔥 x${streak}` : ''}`
+                    : lastResult.answer
+                      ? '❌ Raté !'
+                      : '⏱️ Temps écoulé'}
+                </Text>
+              </Pop>
             )}
           </Card>
         )
       )}
 
       {/* Zone de réponse */}
-      {!party && answerMode === 'qcm' && phase !== 'loading' && phase !== 'ready' && (
+      {!party && answerMode === 'qcm' && (phase === 'listening' || phase === 'answering' || phase === 'reveal') && (
         <View style={styles.choices}>
-          {choices.map((c) => {
+          {choices.map((c, i) => {
             const isRight = track && c === trackLabel(track, target);
             const revealed = phase === 'reveal';
             return (
@@ -319,6 +387,13 @@ export default function Game() {
                   revealed && isRight && styles.choiceRight,
                   revealed && picked === c && !isRight && styles.choiceWrong,
                 ]}>
+                <Text
+                  style={[
+                    styles.letter,
+                    { backgroundColor: revealed && isRight ? colors.success : CHOICE_COLORS[i % CHOICE_COLORS.length] },
+                  ]}>
+                  {String.fromCharCode(65 + i)}
+                </Text>
                 <Text style={styles.choiceText}>{c}</Text>
               </Pressable>
             );
@@ -484,12 +559,23 @@ const styles = StyleSheet.create({
   },
   timerBar: { height: '100%', borderRadius: 4 },
   stage: { alignItems: 'center', paddingVertical: 24, gap: 16 },
+  vinylBox: { width: 190, height: 190, alignItems: 'center', justifyContent: 'center' },
+  overlay: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  countdown: {
+    color: '#fff',
+    fontSize: 84,
+    fontWeight: '900',
+    textShadowRadius: 24,
+    textShadowOffset: { width: 0, height: 0 },
+  },
+  seconds: { color: colors.muted, fontWeight: '800', fontSize: 15 },
   playButton: {
     width: 96,
     height: 96,
     borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    boxShadow: '0 0 30px rgba(0,0,0,0.6)',
   },
   playIcon: { color: '#0B0B1A', fontSize: 40, marginLeft: 6 },
   listening: { color: colors.text, fontSize: 18, fontWeight: '800' },
@@ -509,11 +595,25 @@ const styles = StyleSheet.create({
   verdict: { fontSize: 18, fontWeight: '900' },
   choices: { gap: 10 },
   choice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: colors.border,
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 16,
+    padding: 12,
+  },
+  letter: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    textAlign: 'center',
+    lineHeight: 34,
+    color: '#090914',
+    fontWeight: '900',
+    fontSize: 16,
+    overflow: 'hidden',
   },
   pressed: { opacity: 0.7 },
   choiceRight: {
@@ -524,12 +624,7 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
     backgroundColor: `${colors.danger}33`,
   },
-  choiceText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
+  choiceText: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '700' },
   wrong: { color: colors.danger, fontWeight: '700' },
   flex: { flex: 1 },
   spread: { justifyContent: 'space-between' },
