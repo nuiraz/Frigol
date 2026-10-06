@@ -81,6 +81,16 @@ export default function Game() {
     return [...byId.values()];
   });
   const [queue] = useState(() => shuffle(pool));
+  // Propositions tirées de la même catégorie que le morceau (toutes les catégories ne sont utilisées
+  // qu'en renfort s'il n'y a pas assez de morceaux).
+  const [siblings] = useState(() => {
+    const map = new Map<string, Track[]>();
+    for (const c of store.data.categories) {
+      const tracks = c.tracks.filter((t) => !t.disabled);
+      for (const t of tracks) if (!map.has(t.id)) map.set(t.id, tracks);
+    }
+    return map;
+  });
   const totalRounds = Math.min(Number(params.rounds) || 10, queue.length);
 
   const player = useRef<PlayerHandle>(null);
@@ -100,12 +110,16 @@ export default function Game() {
   const [saved, setSaved] = useState<boolean | null>(null);
   const [countdown, setCountdown] = useState(3);
   const [stalled, setStalled] = useState(false);
+  const [slow, setSlow] = useState(false);
 
   const track = queue[cursor] as Track | undefined;
   const round = results.length + 1;
   const choices = useMemo(
-    () => (track && answerMode === 'qcm' ? buildChoices(track, pool, difficulty.choices, target) : []),
-    [track, answerMode, pool, difficulty.choices, target],
+    () =>
+      track && answerMode === 'qcm'
+        ? buildChoices(track, siblings.get(track.id) ?? pool, difficulty.choices, target, pool)
+        : [],
+    [track, answerMode, pool, siblings, difficulty.choices, target],
   );
   const score = results.reduce((n, r) => n + r.points, 0);
   const correctCount = results.filter((r) => r.correct).length;
@@ -126,6 +140,16 @@ export default function Game() {
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, countdown]);
+
+  // Chargement anormalement long : on propose de passer au morceau suivant.
+  useEffect(() => {
+    if (phase !== 'loading') return;
+    const id = setTimeout(() => setSlow(true), 8000);
+    return () => {
+      clearTimeout(id);
+      setSlow(false);
+    };
+  }, [phase, cursor]);
 
   // Si le son ne démarre pas (navigateur qui bloque la lecture auto), on propose un bouton.
   useEffect(() => {
@@ -321,6 +345,17 @@ export default function Game() {
             )}
           </View>
           {phase === 'loading' && <Muted>Chargement du morceau…</Muted>}
+          {phase === 'loading' && slow && (
+            <Button
+              label="⏭ Ce morceau ne charge pas, passer"
+              small
+              variant="secondary"
+              onPress={() => {
+                setSkipped((n) => n + 1);
+                nextTrack();
+              }}
+            />
+          )}
           {phase === 'countdown' && <Muted>Prépare-toi…</Muted>}
           {phase === 'ready' && (
             <Muted>

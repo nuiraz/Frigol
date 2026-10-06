@@ -40,8 +40,17 @@ function readPlaylist() {
   setTimeout(readPlaylist, 500);
 }
 
+function markPrepared() {
+  clearTimers();
+  var duration = 0;
+  try { duration = player.getDuration() || 0; } catch (e) {}
+  phase = 'prepared';
+  send({ type: 'prepared', start: target.start, duration: duration });
+}
+
 return {
   onState: function (s) {
+    if (s === 5 && phase === 'cueing') { markPrepared(); return; }
     // -1 non démarré, 0 terminé, 1 lecture, 2 pause, 3 chargement, 5 prête
     if (s === 1 && phase === 'preparing') {
       clearTimers();
@@ -68,14 +77,24 @@ return {
   },
   prepare: function (videoId, startMode, start) {
     clearTimers();
-    phase = 'preparing';
     target.startMode = startMode;
     target.start = start || 0;
+    if (startMode !== 'random') {
+      // Départ connu : on se contente de « préparer » la vidéo, sans lecture automatique
+      // (bloquée par certains navigateurs).
+      phase = 'cueing';
+      player.cueVideoById({ videoId: videoId, startSeconds: target.start });
+      watchdog = setTimeout(function () { if (phase === 'cueing') markPrepared(); }, 6000);
+      return;
+    }
+    // Départ aléatoire : il faut connaître la durée, on lance donc la vidéo en silencieux.
+    phase = 'preparing';
     player.mute();
-    player.loadVideoById({ videoId: videoId, startSeconds: startMode === 'fixed' ? target.start : 0 });
+    player.loadVideoById({ videoId: videoId, startSeconds: 0 });
     watchdog = setTimeout(function () {
-      if (phase === 'preparing') { phase = 'idle'; send({ type: 'error', code: 'timeout' }); }
-    }, 15000);
+      // Lecture auto refusée : on se rabat sur une vidéo simplement préparée.
+      if (phase === 'preparing') { player.cueVideoById({ videoId: videoId, startSeconds: 0 }); markPrepared(); }
+    }, 6000);
   },
   segment: function (duration, start) {
     clearTimers();

@@ -36,6 +36,8 @@ export default function CategoryEditor() {
   const [search, setSearch] = useState('');
   const [limit, setLimit] = useState(PAGE);
   const [editing, setEditing] = useState<string | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
 
   if (!ok || !category) {
     return (
@@ -130,6 +132,30 @@ export default function CategoryEditor() {
       store.updateCategory(category!.id, {
         sources: category!.sources.filter((s) => s.listId !== listId),
       });
+  }
+
+  async function removeTrack(track: Track) {
+    if (
+      await confirmAction(
+        'Supprimer le morceau',
+        `« ${track.title || track.id} » sera retiré de la catégorie.`,
+        'Supprimer',
+      )
+    )
+      store.deleteTrack(category!.id, track.id);
+  }
+
+  async function removeSelected() {
+    if (!selected.length) return;
+    const ok = await confirmAction(
+      'Supprimer la sélection',
+      `${selected.length} morceau(x) seront retirés de la catégorie.`,
+      'Supprimer',
+    );
+    if (!ok) return;
+    store.updateCategory(category!.id, { tracks: category!.tracks.filter((t) => !selected.includes(t.id)) });
+    setSelected([]);
+    setSelecting(false);
   }
 
   async function purgeBlocked() {
@@ -243,19 +269,54 @@ export default function CategoryEditor() {
             <Button label={`Purger ${blockedCount} bloqué(s)`} small variant="danger" onPress={purgeBlocked} />
           )}
         </Row>
+        {category.tracks.length > 0 && (
+          <Row>
+            {selecting ? (
+              <>
+                <Button
+                  label={`🗑️ Supprimer (${selected.length})`}
+                  small
+                  variant="danger"
+                  disabled={!selected.length}
+                  onPress={removeSelected}
+                />
+                <Button
+                  label={selected.length === filtered.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                  small
+                  variant="secondary"
+                  onPress={() => setSelected(selected.length === filtered.length ? [] : filtered.map((t) => t.id))}
+                />
+                <Button
+                  label="Annuler"
+                  small
+                  variant="ghost"
+                  onPress={() => {
+                    setSelecting(false);
+                    setSelected([]);
+                  }}
+                />
+              </>
+            ) : (
+              <Button label="☑️ Sélectionner plusieurs" small variant="secondary" onPress={() => setSelecting(true)} />
+            )}
+          </Row>
+        )}
         {category.tracks.length > 8 && (
           <Input value={search} onChangeText={setSearch} placeholder="🔍 Rechercher un titre ou un artiste" />
         )}
         {filtered.slice(0, limit).map((t) => (
           <TrackRow
             key={t.id}
+            selecting={selecting}
+            checked={selected.includes(t.id)}
+            onCheck={() => setSelected((s) => (s.includes(t.id) ? s.filter((x) => x !== t.id) : [...s, t.id]))}
+            onRemove={() => removeTrack(t)}
             track={t}
             expanded={editing === t.id}
             previewing={previewing === t.id}
             onToggleEdit={() => setEditing(editing === t.id ? null : t.id)}
             onPreview={() => preview(t)}
             onChange={(patch) => store.updateTrack(category.id, t.id, patch)}
-            onDelete={() => store.deleteTrack(category.id, t.id)}
             moveTargets={store.data.categories.filter((c) => c.id !== category.id)}
             onMove={(toId) => store.moveTrack(category.id, toId, t.id)}
           />
@@ -277,30 +338,42 @@ export default function CategoryEditor() {
 }
 
 function TrackRow({
+  selecting,
+  checked,
+  onCheck,
+  onRemove,
   track,
   expanded,
   previewing,
   onToggleEdit,
   onPreview,
   onChange,
-  onDelete,
   moveTargets,
   onMove,
 }: {
+  selecting: boolean;
+  checked: boolean;
+  onCheck: () => void;
+  onRemove: () => void;
   track: Track;
   expanded: boolean;
   previewing: boolean;
   onToggleEdit: () => void;
   onPreview: () => void;
   onChange: (patch: Partial<Track>) => void;
-  onDelete: () => void;
   moveTargets: Category[];
   onMove: (categoryId: string) => void;
 }) {
   const incomplete = !track.title || !track.artist;
   return (
-    <View style={[styles.track, (track.disabled || track.blocked) && styles.trackOff]}>
-      <Pressable onPress={onToggleEdit} style={styles.trackHead}>
+    <View
+      style={[
+        styles.track,
+        (track.disabled || track.blocked) && styles.trackOff,
+        selecting && checked && styles.trackChecked,
+      ]}>
+      <Pressable onPress={selecting ? onCheck : onToggleEdit} style={styles.trackHead}>
+        {selecting && <Text style={[styles.checkbox, checked && styles.checkboxOn]}>{checked ? '✓' : ''}</Text>}
         <Image source={thumbnailUrl(track.id)} style={styles.thumb} contentFit="cover" />
         <View style={styles.flex}>
           <Text style={styles.trackTitle} numberOfLines={1}>
@@ -313,9 +386,14 @@ function TrackRow({
             {incomplete ? ' · ✏️ à compléter' : ''}
           </Muted>
         </View>
-        <Button label={previewing ? '■' : '▶'} small variant="secondary" onPress={onPreview} />
+        {!selecting && (
+          <>
+            <Button label={previewing ? '■' : '▶'} small variant="secondary" onPress={onPreview} />
+            <Button label="🗑️" small variant="ghost" onPress={onRemove} />
+          </>
+        )}
       </Pressable>
-      {expanded && (
+      {expanded && !selecting && (
         <View style={styles.editor}>
           <Input value={track.title} onChangeText={(title) => onChange({ title })} placeholder="Titre" />
           <Input value={track.artist} onChangeText={(artist) => onChange({ artist })} placeholder="Artiste" />
@@ -338,7 +416,7 @@ function TrackRow({
               <Muted>Dans le jeu</Muted>
             </Row>
             {track.blocked && <Chip label="Réessayer (débloquer)" onPress={() => onChange({ blocked: false })} />}
-            <Button label="Supprimer" small variant="danger" onPress={onDelete} />
+            <Button label="Supprimer" small variant="danger" onPress={onRemove} />
           </Row>
           {moveTargets.length > 0 && (
             <>
@@ -371,6 +449,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   trackOff: { opacity: 0.55 },
+  trackChecked: { borderWidth: 2, borderColor: colors.danger },
+  checkbox: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.muted,
+    textAlign: 'center',
+    lineHeight: 22,
+    color: '#fff',
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+  checkboxOn: { backgroundColor: colors.danger, borderColor: colors.danger },
   trackHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   thumb: {
     width: 64,

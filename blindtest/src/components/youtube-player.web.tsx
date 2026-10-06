@@ -106,8 +106,8 @@ const styles = StyleSheet.create({
   },
   hidden: {
     position: 'absolute',
-    width: 4,
-    height: 4,
+    width: 200,
+    height: 200,
     opacity: 0.01,
     top: 0,
     left: 0,

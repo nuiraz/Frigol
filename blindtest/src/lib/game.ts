@@ -122,11 +122,17 @@ export function trackLabel(track: Track, target: Target) {
 }
 
 /** Propositions pour le QCM : la bonne réponse + des leurres tirés du même ensemble. */
-export function buildChoices(answer: Track, pool: Track[], count: number, target: Target): string[] {
+export function buildChoices(
+  answer: Track,
+  pool: Track[],
+  count: number,
+  target: Target,
+  fallback: Track[] = [],
+): string[] {
   const right = trackLabel(answer, target);
   const seen = new Set([normalize(right)]);
   const wrong: string[] = [];
-  for (const t of shuffle(pool)) {
+  for (const t of [...shuffle(pool), ...shuffle(fallback)]) {
     if (wrong.length >= count - 1) break;
     const label = trackLabel(t, target);
     const key = normalize(label);

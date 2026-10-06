@@ -84,11 +84,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
   },
-  // Le lecteur doit rester monté (et avoir une taille) pour jouer le son.
+  // YouTube refuse de lire dans un lecteur de moins de 200 × 200 px : il reste à cette taille, presque transparent.
   hidden: {
     position: 'absolute',
-    width: 4,
-    height: 4,
+    width: 200,
+    height: 200,
     opacity: 0.01,
     top: 0,
     left: 0,
