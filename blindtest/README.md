@@ -75,6 +75,16 @@ Ces fonctions utilisent [Supabase](https://supabase.com) (gratuit). Tant qu’il
    (La clé anon est publique par nature ; la sécurité repose sur les règles du fichier SQL.)
 5. `npm run build:web` puis pousse pour mettre à jour le site.
 
+### Catégories synchronisées sur tous les appareils
+
+Les catégories et playlists importées par l’administrateur sont enregistrées dans la base (table `catalog_categories`) et téléchargées par tous les joueurs au lancement de l’app, sur mobile comme sur PC.
+
+Pour devenir administrateur : crée ton compte dans l’app, puis dans Supabase → SQL Editor :
+```sql
+update public.profiles set is_admin = true where username = 'TonPseudo';
+```
+Ensuite, chaque import ou modification faite connecté avec ce compte est publiée automatiquement (état visible dans Administration).
+
 Modération : les signalements arrivent dans la table `reports` (Table Editor) ; supprime une playlist depuis `shared_playlists`.
 Pense à compléter l’éditeur et l’e-mail de contact dans `src/lib/config.ts` (objet `LEGAL`) pour les mentions légales.
 

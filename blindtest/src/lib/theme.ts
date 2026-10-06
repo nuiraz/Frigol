@@ -1,26 +1,32 @@
 export const colors = {
-  bg: '#090914',
-  surface: '#14142A',
-  surfaceAlt: '#1E1E3C',
-  border: '#2C2C55',
-  text: '#F4F4FF',
-  muted: '#9A9AC0',
-  primary: '#FF4FD8',
-  secondary: '#4FC3FF',
-  success: '#2EE59D',
-  danger: '#FF5470',
-  warning: '#FFB020',
-  violet: '#8B5CFF',
+  bg: '#0D0D0C',
+  surface: '#161614',
+  surfaceAlt: '#201F1C',
+  border: '#2C2B27',
+  text: '#F2EEE6',
+  muted: '#8F8A80',
+  faint: '#5C5850',
+  accent: '#F5C518',
+  onAccent: '#0D0D0C',
+  success: '#38D47A',
+  danger: '#FF5544',
 };
 
-export const CATEGORY_COLORS = ['#FF4FD8', '#4FC3FF', '#FFB020', '#2EE59D', '#B36BFF', '#FF5470', '#FF8A3D', '#3DFFE0'];
+export const fonts = {
+  display: 'Anton',
+  regular: 'DMSans',
+  medium: 'DMSans-Medium',
+  bold: 'DMSans-Bold',
+};
 
-export const radius = { sm: 10, md: 16, lg: 24 };
+export const CATEGORY_COLORS = ['#F5C518', '#FF5544', '#38D47A', '#5AA9FF', '#C08CFF', '#FF8A3D', '#3DD6C4', '#F2EEE6'];
+
+export const radius = { sm: 10, md: 14, lg: 18 };
 
 /** Adresse publique de la version web (GitHub Pages). */
 export const WEB_APP_URL = 'https://nuiraz.github.io/jeuxenigme/app/';
 
-/** Assombrit une couleur hexadécimale (#RRGGBB) pour construire un dégradé. */
+/** Assombrit une couleur hexadécimale (#RRGGBB). */
 export function shade(hex: string, amount = 0.35) {
   const n = parseInt(hex.slice(1), 16);
   const f = (c: number) => Math.max(0, Math.round(c * (1 - amount)));

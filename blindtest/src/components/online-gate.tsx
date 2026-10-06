@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
 import { colors } from '@/lib/theme';
 
-import { Button, Card, Label, Muted, Screen } from './ui';
+import { Button, Card, Icon, Label, Muted, Screen } from './ui';
 
 /** Affiche le contenu seulement si le service en ligne est configuré (et, si demandé, l'utilisateur connecté). */
 export function OnlineGate({
@@ -22,7 +22,7 @@ export function OnlineGate({
     return (
       <Screen>
         <Card style={styles.center}>
-          <Text style={styles.icon}>🛰️</Text>
+          <Icon name="cloud-off" size={36} color={colors.muted} />
           <Label>Fonctions en ligne bientôt disponibles</Label>
           <Muted style={styles.text}>
             Les comptes, le classement mondial et le hub communautaire seront actifs dès que le serveur sera branché. Le
@@ -35,7 +35,7 @@ export function OnlineGate({
   if (!auth.ready) {
     return (
       <Screen>
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
+        <ActivityIndicator color={colors.accent} style={styles.loader} />
       </Screen>
     );
   }
@@ -43,7 +43,7 @@ export function OnlineGate({
     return (
       <Screen>
         <Card style={styles.center}>
-          <Text style={styles.icon}>👤</Text>
+          <Icon name="user" size={36} color={colors.muted} />
           <Label>Connexion requise</Label>
           <Muted style={styles.text}>{reason ?? 'Connecte-toi ou crée un compte gratuit pour continuer.'}</Muted>
           <Button label="Se connecter / S’inscrire" onPress={() => router.push('/account')} style={styles.full} />

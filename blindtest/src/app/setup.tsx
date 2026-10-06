@@ -2,12 +2,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/components/ui';
+import { Button, Card, Chip, Icon, Input, Label, Row, Screen, Segmented, Txt } from '@/components/ui';
 import { DIFFICULTIES, TARGETS, type AnswerMode, type Target } from '@/lib/game';
 import { playableTracks, useStore } from '@/lib/store';
-import { colors } from '@/lib/theme';
-
-const ROUNDS = [5, 10, 15, 20];
+import { colors, fonts } from '@/lib/theme';
 
 export default function Setup() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
@@ -31,6 +29,7 @@ export default function Setup() {
     playableTracks,
   );
   const poolSize = new Set(pool.map((t) => t.id)).size;
+  const allCount = new Set(categories.flatMap(playableTracks).map((t) => t.id)).size;
 
   const toggle = (id: string) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
@@ -63,9 +62,9 @@ export default function Setup() {
     return (
       <Screen>
         <Card>
-          <Label>Aucune musique disponible</Label>
-          <Muted>Ajoute des playlists YouTube Music depuis la page d’administration.</Muted>
-          <Button label="Aller à l’administration" onPress={() => router.replace('/admin')} />
+          <Txt variant="title">Aucune musique</Txt>
+          <Txt variant="muted">Importe une playlist YouTube Music pour commencer.</Txt>
+          <Button label="Importer une playlist" icon="download" onPress={() => router.replace('/admin/import')} />
         </Card>
       </Screen>
     );
@@ -73,135 +72,127 @@ export default function Setup() {
 
   return (
     <Screen>
-      <Card>
-        <Label>🎼 Catégories</Label>
-        <View style={styles.catGrid}>
-          <CategoryTile
-            emoji="🎲"
-            name="Toutes"
-            count={new Set(categories.flatMap(playableTracks).map((t) => t.id)).size}
-            color={colors.violet}
-            selected={selected.length === 0}
-            onPress={() => setSelected([])}
-          />
+      <Section title="Catégories" hint={`${poolSize} morceaux, joués dans le désordre`}>
+        <Row>
+          <Chip label={`Toutes · ${allCount}`} selected={selected.length === 0} onPress={() => setSelected([])} />
           {categories.map((c) => (
-            <CategoryTile
+            <Chip
               key={c.id}
-              emoji={c.emoji}
-              name={c.name}
-              count={playableTracks(c).length}
-              color={c.color}
+              label={`${c.name} · ${playableTracks(c).length}`}
+              dot={c.color}
               selected={selected.includes(c.id)}
               onPress={() => toggle(c.id)}
             />
           ))}
-        </View>
-        <Muted>{poolSize} morceaux dans la sélection, joués dans un ordre aléatoire</Muted>
-      </Card>
-
-      <Card>
-        <Label>🎚️ Niveau</Label>
-        {DIFFICULTIES.map((d) => (
-          <Pressable
-            key={d.id}
-            onPress={() => {
-              setDifficultyId(d.id);
-              setAnswerMode(null);
-            }}
-            style={[
-              styles.level,
-              d.id === difficultyId && {
-                borderColor: d.color,
-                backgroundColor: `${d.color}22`,
-              },
-            ]}>
-            <Text style={styles.levelEmoji}>{d.emoji}</Text>
-            <View style={styles.flex}>
-              <Text style={[styles.levelTitle, d.id === difficultyId && { color: d.color }]}>{d.label}</Text>
-              <Muted>{d.description}</Muted>
-            </View>
-            <Text style={styles.levelPoints}>{d.basePoints} pts</Text>
-          </Pressable>
-        ))}
-      </Card>
-
-      <Card>
-        <Label>🎯 Il faut trouver</Label>
-        <Row>
-          {TARGETS.map((t) => (
-            <Chip key={t.id} label={t.label} selected={target === t.id} onPress={() => setTarget(t.id)} />
-          ))}
         </Row>
-        {!party && (
-          <>
-            <Label>✍️ Réponse</Label>
-            <Row>
-              <Chip
-                label="Propositions (QCM)"
-                selected={effectiveAnswer === 'qcm'}
-                onPress={() => setAnswerMode('qcm')}
-              />
-              <Chip label="À écrire" selected={effectiveAnswer === 'texte'} onPress={() => setAnswerMode('texte')} />
-            </Row>
-          </>
-        )}
-        <Label>▶️ Départ de l’extrait</Label>
-        {difficulty.startMode === 'intro' ? (
-          <Muted>Toujours le début du morceau avec ce niveau.</Muted>
-        ) : (
-          <Row>
-            <Chip label="⏮ Début du morceau" selected={startFrom === 'debut'} onPress={() => setStartFrom('debut')} />
-            <Chip
-              label="🔀 Moment aléatoire"
-              selected={startFrom === 'aleatoire'}
-              onPress={() => setStartFrom('aleatoire')}
+      </Section>
+
+      <Section title="Niveau">
+        <Card style={styles.levels}>
+          {DIFFICULTIES.map((d, i) => {
+            const on = d.id === difficultyId;
+            return (
+              <Pressable
+                key={d.id}
+                onPress={() => {
+                  setDifficultyId(d.id);
+                  setAnswerMode(null);
+                }}
+                style={[styles.level, i > 0 && styles.levelBorder, on && styles.levelOn]}>
+                <View style={[styles.badge, { borderColor: d.color }, on && { backgroundColor: d.color }]}>
+                  <Text style={[styles.badgeText, { color: on ? colors.onAccent : d.color }]}>{d.badge}</Text>
+                </View>
+                <View style={styles.flex}>
+                  <Txt variant="strong">{d.label}</Txt>
+                  <Txt variant="small">{d.description}</Txt>
+                </View>
+                {on ? <Icon name="check" color={colors.accent} /> : <Text style={styles.points}>{d.basePoints}</Text>}
+              </Pressable>
+            );
+          })}
+        </Card>
+      </Section>
+
+      <Section title="Règles">
+        <Card>
+          <Field label="À trouver">
+            <Segmented
+              options={TARGETS.map((t) => ({ value: t.id, label: t.label }))}
+              value={target}
+              onChange={setTarget}
             />
-          </Row>
-        )}
-        <Label>⏯ Lancement</Label>
-        <Row>
-          <Chip label="⚡ Automatique (3, 2, 1…)" selected={auto} onPress={() => setAuto(true)} />
-          <Chip label="👆 Bouton ▶" selected={!auto} onPress={() => setAuto(false)} />
-        </Row>
-        <Label>🔁 Nombre de manches</Label>
-        <Row>
-          {ROUNDS.map((r) => (
-            <Chip key={r} label={String(r)} selected={rounds === r} onPress={() => setRounds(r)} />
-          ))}
-        </Row>
-      </Card>
+          </Field>
+          {!party && (
+            <Field label="Réponse">
+              <Segmented<AnswerMode>
+                options={[
+                  { value: 'qcm', label: 'Propositions' },
+                  { value: 'texte', label: 'À écrire' },
+                ]}
+                value={effectiveAnswer}
+                onChange={setAnswerMode}
+              />
+            </Field>
+          )}
+          <Field label="Départ de l’extrait">
+            {difficulty.startMode === 'intro' ? (
+              <Txt variant="small">Toujours le début du morceau à ce niveau.</Txt>
+            ) : (
+              <Segmented
+                options={[
+                  { value: 'debut', label: 'Début du morceau' },
+                  { value: 'aleatoire', label: 'Au hasard' },
+                ]}
+                value={startFrom}
+                onChange={setStartFrom}
+              />
+            )}
+          </Field>
+          <Field label="Lancement">
+            <Segmented
+              options={[
+                { value: 'auto', label: 'Auto (3, 2, 1)' },
+                { value: 'manuel', label: 'Au bouton' },
+              ]}
+              value={auto ? 'auto' : 'manuel'}
+              onChange={(v) => setAuto(v === 'auto')}
+            />
+          </Field>
+          <Field label="Manches">
+            <Segmented
+              options={[5, 10, 15, 20].map((r) => ({ value: r, label: String(r) }))}
+              value={rounds}
+              onChange={setRounds}
+            />
+          </Field>
+        </Card>
+      </Section>
 
       {party && (
-        <Card>
-          <Label>👥 Joueurs</Label>
-          <Muted>Tout le monde écoute, puis l’animateur révèle la réponse et désigne qui a trouvé.</Muted>
-          <Row>
-            {players.map((p) => (
-              <Chip
-                key={p}
-                label={`${p}  ✕`}
-                selected
-                color={colors.secondary}
-                onPress={() => setPlayers(players.filter((x) => x !== p))}
+        <Section title="Joueurs" hint="Tout le monde écoute, l’animateur révèle et coche qui a trouvé.">
+          <Card>
+            <Row>
+              {players.map((p) => (
+                <Chip key={p} label={`${p}  ×`} selected onPress={() => setPlayers(players.filter((x) => x !== p))} />
+              ))}
+            </Row>
+            <Row style={styles.noWrap}>
+              <Input
+                value={newPlayer}
+                onChangeText={setNewPlayer}
+                placeholder="Ajouter un joueur"
+                onSubmitEditing={addPlayer}
+                style={styles.flex}
               />
-            ))}
-          </Row>
-          <Row style={styles.noWrap}>
-            <Input
-              value={newPlayer}
-              onChangeText={setNewPlayer}
-              placeholder="Nom du joueur"
-              onSubmitEditing={addPlayer}
-              style={styles.flex}
-            />
-            <Button label="Ajouter" small onPress={addPlayer} />
-          </Row>
-        </Card>
+              <Button label="" icon="plus" small variant="secondary" onPress={addPlayer} />
+            </Row>
+          </Card>
+        </Section>
       )}
 
       <Button
-        label={canStart ? '🚀  C’est parti !' : 'Pas assez de morceaux'}
-        color={difficulty.color}
+        label={canStart ? 'Commencer' : 'Pas assez de morceaux'}
+        icon={canStart ? 'play' : undefined}
         disabled={!canStart}
         onPress={start}
       />
@@ -209,80 +200,45 @@ export default function Setup() {
   );
 }
 
-function CategoryTile({
-  emoji,
-  name,
-  count,
-  color,
-  selected,
-  onPress,
-}: {
-  emoji: string;
-  name: string;
-  count: number;
-  color: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
+function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.catTile,
-        selected && { borderColor: color, backgroundColor: `${color}26` },
-        pressed && { opacity: 0.8 },
-      ]}>
-      <Text style={styles.catEmoji}>{emoji}</Text>
-      <Text style={styles.catName} numberOfLines={1}>
-        {name}
-      </Text>
-      <Text style={[styles.catCount, { color: selected ? color : colors.muted }]}>{count} titres</Text>
-      {selected && <Text style={[styles.check, { backgroundColor: color }]}>✓</Text>}
-    </Pressable>
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <Label>{title}</Label>
+        {hint && <Txt variant="small">{hint}</Txt>}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.field}>
+      <Txt variant="small">{label}</Txt>
+      {children}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  catTile: {
-    flexGrow: 1,
-    flexBasis: '30%',
-    minWidth: 96,
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    gap: 2,
-  },
-  catEmoji: { fontSize: 28 },
-  catName: { color: colors.text, fontWeight: '800', fontSize: 14 },
-  catCount: { fontSize: 12, fontWeight: '700' },
-  check: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    textAlign: 'center',
-    lineHeight: 22,
-    color: '#090914',
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-  level: {
-    flexDirection: 'row',
+  section: { gap: 10 },
+  sectionHead: { gap: 2 },
+  levels: { padding: 0, gap: 0, overflow: 'hidden' },
+  level: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 },
+  levelBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  levelOn: { backgroundColor: colors.surfaceAlt },
+  badge: {
+    width: 58,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1.5,
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.border,
+    justifyContent: 'center',
   },
-  levelEmoji: { fontSize: 26 },
-  levelTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
-  levelPoints: { color: colors.warning, fontWeight: '800' },
-  flex: { flex: 1 },
+  badgeText: { fontFamily: fonts.display, fontSize: 17, letterSpacing: 0.5 },
+  points: { fontFamily: fonts.medium, color: colors.faint, fontSize: 13 },
+  field: { gap: 8 },
+  flex: { flex: 1, gap: 2 },
   noWrap: { flexWrap: 'nowrap' },
 });

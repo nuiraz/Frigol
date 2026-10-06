@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import Feather from '@expo/vector-icons/Feather';
+import type { ComponentProps, ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,49 +10,40 @@ import {
   View,
   type StyleProp,
   type TextInputProps,
+  type TextProps,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-import { colors, radius, shade } from '@/lib/theme';
+import { colors, fonts, radius } from '@/lib/theme';
 
-/** Halos colorés en fond d'écran. */
-export function Backdrop({ color = colors.primary, color2 = colors.violet }: { color?: string; color2?: string }) {
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Svg width="100%" height="100%">
-        <Defs>
-          <RadialGradient id="g1" cx="90%" cy="0%" r="65%">
-            <Stop offset="0" stopColor={color} stopOpacity={0.28} />
-            <Stop offset="1" stopColor={color} stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="g2" cx="0%" cy="100%" r="70%">
-            <Stop offset="0" stopColor={color2} stopOpacity={0.22} />
-            <Stop offset="1" stopColor={color2} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#g1)" />
-        <Rect width="100%" height="100%" fill="url(#g2)" />
-      </Svg>
-    </View>
-  );
+export type IconName = ComponentProps<typeof Feather>['name'];
+
+export function Icon({ name, size = 18, color = colors.text }: { name: IconName; size?: number; color?: string }) {
+  return <Feather name={name} size={size} color={color} />;
+}
+
+type Variant = 'display' | 'title' | 'body' | 'strong' | 'label' | 'muted' | 'small';
+
+/** Texte typographié : toutes les polices de l'app passent par ici. */
+export function Txt({ variant = 'body', style, ...props }: TextProps & { variant?: Variant }) {
+  return <Text {...props} style={[text[variant], style]} />;
 }
 
 export function Screen({
   children,
   scroll = true,
   contentStyle,
+  edges = ['bottom', 'left', 'right'],
 }: {
   children: ReactNode;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
+  edges?: ('top' | 'bottom' | 'left' | 'right')[];
 }) {
   return (
-    <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
-      <Backdrop />
+    <SafeAreaView style={styles.screen} edges={edges}>
       {scroll ? (
         <ScrollView contentContainerStyle={[styles.content, contentStyle]} keyboardShouldPersistTaps="handled">
           {children}
@@ -67,6 +59,8 @@ type ButtonProps = {
   label: string;
   onPress?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  icon?: IconName;
+  /** Couleur de fond du bouton principal (par défaut : accent). */
   color?: string;
   disabled?: boolean;
   loading?: boolean;
@@ -74,42 +68,74 @@ type ButtonProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function Button({ label, onPress, variant = 'primary', color, disabled, loading, small, style }: ButtonProps) {
-  const base = variant === 'primary' ? (color ?? colors.primary) : variant === 'danger' ? colors.danger : null;
-  const content = loading ? (
-    <ActivityIndicator color={colors.text} />
-  ) : (
-    <Text style={[styles.buttonText, small && styles.buttonTextSmall]}>{label}</Text>
-  );
+export function Button({
+  label,
+  onPress,
+  variant = 'primary',
+  icon,
+  color,
+  disabled,
+  loading,
+  small,
+  style,
+}: ButtonProps) {
+  const fg =
+    variant === 'primary'
+      ? colors.onAccent
+      : variant === 'danger'
+        ? colors.danger
+        : variant === 'ghost'
+          ? colors.muted
+          : colors.text;
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
-        styles.buttonOuter,
-        small && styles.buttonOuterSmall,
-        { opacity: disabled ? 0.4 : pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
-        base && !small && { boxShadow: `0 6px 18px ${base}55` },
+        styles.button,
+        small && styles.buttonSmall,
+        variant === 'primary' && { backgroundColor: color ?? colors.accent },
+        variant === 'secondary' && styles.buttonSecondary,
+        variant === 'danger' && styles.buttonDanger,
+        { opacity: disabled ? 0.35 : pressed ? 0.75 : 1 },
         style,
       ]}>
-      {base ? (
-        <LinearGradient
-          colors={[base, shade(base)]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.button, small && styles.buttonSmall]}>
-          {content}
-        </LinearGradient>
+      {loading ? (
+        <ActivityIndicator color={fg} />
       ) : (
-        <View
-          style={[
-            styles.button,
-            small && styles.buttonSmall,
-            variant === 'secondary' ? { backgroundColor: colors.surfaceAlt } : styles.buttonGhost,
-          ]}>
-          {content}
-        </View>
+        <>
+          {icon && <Icon name={icon} size={small ? 15 : 18} color={fg} />}
+          {!!label && <Text style={[styles.buttonText, small && styles.buttonTextSmall, { color: fg }]}>{label}</Text>}
+        </>
       )}
+    </Pressable>
+  );
+}
+
+/** Bouton rond ne contenant qu'une icône. */
+export function IconButton({
+  icon,
+  onPress,
+  color = colors.text,
+  size = 40,
+  label,
+}: {
+  icon: IconName;
+  onPress?: () => void;
+  color?: string;
+  size?: number;
+  label?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityLabel={label}
+      hitSlop={6}
+      style={({ pressed }) => [
+        styles.iconButton,
+        { width: size, height: size, borderRadius: size / 2, opacity: pressed ? 0.6 : 1 },
+      ]}>
+      <Icon name={icon} size={size * 0.45} color={color} />
     </Pressable>
   );
 }
@@ -119,11 +145,12 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 }
 
 export function Title({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[styles.title, style]}>{children}</Text>;
+  return <Text style={[text.title, style]}>{children}</Text>;
 }
 
+/** Intitulé de section (petites capitales). */
 export function Label({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[styles.label, style]}>{children}</Text>;
+  return <Text style={[text.label, style]}>{children}</Text>;
 }
 
 export function Muted({
@@ -136,100 +163,212 @@ export function Muted({
   numberOfLines?: number;
 }) {
   return (
-    <Text style={[styles.muted, style]} numberOfLines={numberOfLines}>
+    <Text style={[text.muted, style]} numberOfLines={numberOfLines}>
       {children}
     </Text>
   );
 }
 
 export function Input(props: TextInputProps) {
-  return <TextInput placeholderTextColor={colors.muted} {...props} style={[styles.input, props.style]} />;
+  return <TextInput placeholderTextColor={colors.faint} {...props} style={[styles.input, props.style]} />;
 }
 
 export function Chip({
   label,
   selected,
   onPress,
-  color = colors.primary,
+  color,
+  dot,
 }: {
   label: string;
   selected?: boolean;
   onPress?: () => void;
+  /** Couleur de remplissage une fois sélectionné (par défaut : texte clair). */
   color?: string;
+  /** Pastille de couleur affichée avant le texte. */
+  dot?: string;
 }) {
+  const fill = color ?? colors.text;
   return (
-    <Pressable onPress={onPress} style={[styles.chip, selected && { backgroundColor: color, borderColor: color }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        selected && { backgroundColor: fill, borderColor: fill },
+        pressed && { opacity: 0.7 },
+      ]}>
+      {dot && <View style={[styles.dot, { backgroundColor: dot }]} />}
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
     </Pressable>
   );
+}
+
+/** Choix unique sous forme de barre segmentée. */
+export function Segmented<T extends string | number>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <View style={styles.segmented}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable
+            key={String(o.value)}
+            onPress={() => onChange(o.value)}
+            style={[styles.segment, on && styles.segmentOn]}>
+            <Text style={[styles.segmentText, on && styles.segmentTextOn]} numberOfLines={1}>
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Ligne de menu : icône, titre, sous-titre, chevron. */
+export function ListRow({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  right,
+  iconColor = colors.text,
+}: {
+  icon?: IconName;
+  title: string;
+  subtitle?: string;
+  onPress?: () => void;
+  right?: ReactNode;
+  iconColor?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.listRow, pressed && { backgroundColor: colors.surfaceAlt }]}>
+      {icon && (
+        <View style={styles.listIcon}>
+          <Icon name={icon} size={18} color={iconColor} />
+        </View>
+      )}
+      <View style={styles.flex}>
+        <Text style={text.strong}>{title}</Text>
+        {subtitle && <Text style={text.small}>{subtitle}</Text>}
+      </View>
+      {right ?? (onPress && <Icon name="chevron-right" size={18} color={colors.faint} />)}
+    </Pressable>
+  );
+}
+
+export function Divider() {
+  return <View style={styles.divider} />;
 }
 
 export function Row({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[styles.row, style]}>{children}</View>;
 }
 
+export const text = StyleSheet.create({
+  display: { fontFamily: fonts.display, color: colors.text, fontSize: 44, lineHeight: 50, textTransform: 'uppercase' },
+  title: { fontFamily: fonts.bold, color: colors.text, fontSize: 22, letterSpacing: -0.3 },
+  body: { fontFamily: fonts.regular, color: colors.text, fontSize: 15, lineHeight: 21 },
+  strong: { fontFamily: fonts.bold, color: colors.text, fontSize: 15 },
+  label: {
+    fontFamily: fonts.bold,
+    color: colors.muted,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  muted: { fontFamily: fonts.regular, color: colors.muted, fontSize: 14, lineHeight: 20 },
+  small: { fontFamily: fonts.regular, color: colors.muted, fontSize: 13 },
+});
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: {
-    padding: 16,
-    gap: 14,
-    width: '100%',
-    maxWidth: 720,
-    alignSelf: 'center',
-  },
+  content: { padding: 20, gap: 16, width: '100%', maxWidth: 640, alignSelf: 'center' },
   fill: { flex: 1 },
-  buttonOuter: { borderRadius: radius.md },
-  buttonOuterSmall: { borderRadius: radius.sm },
+  flex: { flex: 1, gap: 2 },
   button: {
-    paddingVertical: 15,
+    minHeight: 52,
     paddingHorizontal: 20,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
   },
-  buttonSmall: {
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: radius.sm,
+  buttonSmall: { minHeight: 38, paddingHorizontal: 14, borderRadius: radius.sm, gap: 7 },
+  buttonSecondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+  buttonDanger: { borderWidth: 1, borderColor: `${colors.danger}66` },
+  buttonText: { fontFamily: fonts.bold, fontSize: 16, textAlign: 'center' },
+  buttonTextSmall: { fontSize: 14 },
+  iconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  buttonGhost: { borderWidth: 1, borderColor: colors.border },
-  buttonText: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  buttonTextSmall: { fontSize: 14, fontWeight: '700' },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: 16,
-    gap: 10,
+    gap: 12,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  title: { color: colors.text, fontSize: 22, fontWeight: '900' },
-  label: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  muted: { color: colors.muted, fontSize: 14 },
   input: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.bg,
     color: colors.text,
+    fontFamily: fonts.regular,
     borderRadius: radius.sm,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 13,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
   },
-  chipText: { color: colors.muted, fontWeight: '700', fontSize: 14 },
-  chipTextSelected: { color: '#0B0B1A' },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  chipText: { fontFamily: fonts.medium, color: colors.text, fontSize: 14 },
+  chipTextSelected: { color: colors.onAccent },
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: colors.bg,
+    borderRadius: radius.sm,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  segment: { flex: 1, paddingVertical: 9, paddingHorizontal: 6, borderRadius: 8, alignItems: 'center' },
+  segmentOn: { backgroundColor: colors.text },
+  segmentText: { fontFamily: fonts.medium, color: colors.muted, fontSize: 13 },
+  segmentTextOn: { color: colors.onAccent, fontFamily: fonts.bold },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16 },
+  listIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: { height: 1, backgroundColor: colors.border, marginLeft: 66 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
 });

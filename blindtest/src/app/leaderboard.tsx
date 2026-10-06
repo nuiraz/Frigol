@@ -7,7 +7,7 @@ import { Button, Card, Chip, Muted, Row, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { DIFFICULTIES } from '@/lib/game';
 import { fetchLeaderboard, type LeaderboardRow } from '@/lib/online';
-import { colors } from '@/lib/theme';
+import { colors, fonts } from '@/lib/theme';
 
 const PERIODS = [
   { id: 'week', label: 'Cette semaine', days: 7 },
@@ -49,7 +49,6 @@ function Leaderboard() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text style={styles.globe}>🌍</Text>
         <Text style={styles.title}>Classement mondial</Text>
       </View>
 
@@ -76,19 +75,19 @@ function Leaderboard() {
           <Button label="Se connecter" small onPress={() => router.push('/account')} />
         </Card>
       )}
-      {myRank >= 0 && <Text style={styles.myRank}>Tu es {myRank + 1}ᵉ sur ce classement 🎉</Text>}
+      {myRank >= 0 && <Text style={styles.myRank}>Tu es {myRank + 1}ᵉ sur ce classement</Text>}
 
       <Card>
         {error ? (
           <Text style={styles.error}>{error}</Text>
         ) : !rows ? (
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.accent} />
         ) : rows.length === 0 ? (
           <Muted>Personne n’a encore joué à ce niveau. Sois le premier !</Muted>
         ) : (
           rows.map((r, i) => (
             <View key={r.user_id} style={[styles.row, r.user_id === me && styles.rowMe]}>
-              <Text style={styles.rank}>{['🥇', '🥈', '🥉'][i] ?? i + 1}</Text>
+              <Text style={[styles.rank, i < 3 && styles.rankTop]}>{i + 1}</Text>
               <Text style={styles.avatar}>{r.avatar}</Text>
               <View style={styles.flex}>
                 <Text style={styles.name} numberOfLines={1}>
@@ -110,11 +109,12 @@ function Leaderboard() {
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 4, paddingTop: 8 },
   globe: { fontSize: 52 },
-  title: { color: colors.text, fontSize: 26, fontWeight: '900' },
+  title: { fontFamily: fonts.display, color: colors.text, fontSize: 40, lineHeight: 46, textTransform: 'uppercase' },
+  rankTop: { color: colors.accent },
   center: { justifyContent: 'center' },
   cta: { alignItems: 'center' },
   ctaText: { textAlign: 'center' },
-  myRank: { color: colors.success, fontWeight: '800', textAlign: 'center' },
+  myRank: { color: colors.success, fontFamily: fonts.bold, textAlign: 'center' },
   error: { color: colors.danger },
   row: {
     flexDirection: 'row',
@@ -124,10 +124,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderRadius: 12,
   },
-  rowMe: { backgroundColor: `${colors.primary}22` },
-  rank: { width: 32, textAlign: 'center', color: colors.muted, fontWeight: '900', fontSize: 16 },
+  rowMe: { backgroundColor: `${colors.accent}22` },
+  rank: { width: 28, textAlign: 'center', color: colors.faint, fontFamily: fonts.display, fontSize: 20 },
   avatar: { fontSize: 26 },
   flex: { flex: 1 },
-  name: { color: colors.text, fontWeight: '800', fontSize: 16 },
-  score: { color: colors.warning, fontWeight: '900', fontSize: 20 },
+  name: { color: colors.text, fontFamily: fonts.bold, fontSize: 16 },
+  score: { color: colors.accent, fontFamily: fonts.bold, fontSize: 20 },
 });

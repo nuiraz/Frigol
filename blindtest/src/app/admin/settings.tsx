@@ -65,13 +65,13 @@ export default function Settings() {
   return (
     <Screen>
       <Card>
-        <Label>🔑 Code administrateur</Label>
+        <Label>Code administrateur</Label>
         <Input value={pin} onChangeText={setPin} placeholder="Nouveau code" secureTextEntry keyboardType="number-pad" />
         <Button label="Changer le code" small onPress={savePin} disabled={!pin} />
       </Card>
 
       <Card>
-        <Label>▶️ Clé API YouTube (optionnelle)</Label>
+        <Label>Clé API YouTube (optionnelle)</Label>
         <Muted>
           Sans clé, l’import lit la playlist via le lecteur YouTube (jusqu’à ~200 titres). Avec une clé YouTube Data API
           v3 (gratuite sur console.cloud.google.com), l’import est plus rapide et plus fiable.
@@ -88,7 +88,7 @@ export default function Settings() {
       </Card>
 
       <Card>
-        <Label>💾 Sauvegarde</Label>
+        <Label>Sauvegarde</Label>
         <Muted>Exporte tes catégories pour les partager ou les copier sur un autre téléphone.</Muted>
         <Button label="Exporter les catégories" small variant="secondary" onPress={exportData} />
         <Input
@@ -102,7 +102,7 @@ export default function Settings() {
       </Card>
 
       <Card>
-        <Label>🧹 Réinitialiser</Label>
+        <Label>Réinitialiser</Label>
         <Button
           label="Effacer les meilleurs scores"
           small

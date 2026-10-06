@@ -18,7 +18,7 @@ import {
 } from '@/lib/online';
 import { quickPlay } from '@/lib/quick-play';
 import { useStore } from '@/lib/store';
-import { colors } from '@/lib/theme';
+import { colors, fonts } from '@/lib/theme';
 import { thumbnailUrl } from '@/lib/youtube';
 
 export default function HubDetailScreen() {
@@ -65,7 +65,7 @@ function HubDetail() {
   if (!playlist) {
     return (
       <Screen>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.accent} />
       </Screen>
     );
   }
@@ -123,14 +123,14 @@ function HubDetail() {
         <Text style={styles.emoji}>{playlist.emoji}</Text>
         <Text style={styles.title}>{playlist.title}</Text>
         <Muted>
-          par {playlist.profiles?.avatar} {playlist.profiles?.username ?? 'Anonyme'} · {playlist.track_count} titres · ▶{' '}
-          {playlist.plays_count}
+          par {playlist.profiles?.avatar} {playlist.profiles?.username ?? 'Anonyme'} · {playlist.track_count} titres ·{' '}
+          {playlist.plays_count} écoutes
         </Muted>
         {!!playlist.description && <Muted style={styles.center}>{playlist.description}</Muted>}
       </View>
 
       <Button
-        label="▶  Jouer maintenant"
+        label="Jouer maintenant"
         color={playlist.color}
         onPress={() => {
           const { categoryId } = addToMine();
@@ -140,7 +140,7 @@ function HubDetail() {
       />
       <Row style={styles.noWrap}>
         <Button
-          label="📥 Ajouter à mes catégories"
+          label="Ajouter à mes catégories"
           variant="secondary"
           style={styles.flex}
           onPress={() => {
@@ -148,11 +148,11 @@ function HubDetail() {
             notify('Ajouté', `${added} morceau(x) ajouté(s) à tes catégories.`);
           }}
         />
-        <Button label={`${liked ? '❤️' : '🤍'} ${playlist.likes_count}`} variant="secondary" onPress={toggleLike} />
+        <Button label={`${liked ? '' : ''} ${playlist.likes_count}`} variant="secondary" onPress={toggleLike} />
       </Row>
 
       <Card>
-        <Label>🎵 Morceaux</Label>
+        <Label>Morceaux</Label>
         {tracks.map((t) => (
           <Row key={t.id} style={styles.noWrap}>
             <Image source={thumbnailUrl(t.id)} style={styles.thumb} contentFit="cover" />
@@ -175,7 +175,7 @@ function HubDetail() {
       </Card>
 
       {me === playlist.user_id ? (
-        <Button label="🗑️ Retirer du hub" variant="danger" small onPress={remove} />
+        <Button label="Retirer du hub" variant="danger" small onPress={remove} />
       ) : me ? (
         reporting ? (
           <Card>
@@ -187,7 +187,7 @@ function HubDetail() {
             </Row>
           </Card>
         ) : (
-          <Button label="🚩 Signaler" variant="ghost" small onPress={() => setReporting(true)} />
+          <Button label="Signaler" variant="ghost" small onPress={() => setReporting(true)} />
         )
       ) : null}
     </Screen>
@@ -197,11 +197,18 @@ function HubDetail() {
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 6, paddingVertical: 10 },
   emoji: { fontSize: 56 },
-  title: { color: colors.text, fontSize: 26, fontWeight: '900', textAlign: 'center' },
+  title: {
+    fontFamily: fonts.display,
+    color: colors.text,
+    fontSize: 38,
+    lineHeight: 44,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
   center: { textAlign: 'center' },
   error: { color: colors.danger },
   noWrap: { flexWrap: 'nowrap' },
   flex: { flex: 1 },
   thumb: { width: 64, height: 36, borderRadius: 6, backgroundColor: colors.border },
-  trackTitle: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  trackTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 15 },
 });

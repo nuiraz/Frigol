@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/auth';
 import { sharePlaylist } from '@/lib/online';
 import { confirmAction, notify } from '@/lib/dialogs';
 import { useStore } from '@/lib/store';
-import { CATEGORY_COLORS, colors } from '@/lib/theme';
+import { CATEGORY_COLORS, colors, fonts } from '@/lib/theme';
 import type { Category, PlaylistSource, Track } from '@/lib/types';
 import { readYouTubeLink } from '@/lib/importer';
 import { BLOCKED_ERRORS, thumbnailUrl } from '@/lib/youtube';
@@ -240,7 +240,7 @@ export default function CategoryEditor() {
       </Card>
 
       <Card>
-        <Label>📥 Ajouter des musiques</Label>
+        <Label>Ajouter des musiques</Label>
         <Muted>
           Colle le lien d’une playlist YouTube Music / YouTube (music.youtube.com/playlist?list=…) ou d’un seul morceau.
         </Muted>
@@ -263,7 +263,7 @@ export default function CategoryEditor() {
 
       {category.sources.length > 0 && (
         <Card>
-          <Label>🔗 Playlists importées</Label>
+          <Label>Playlists importées</Label>
           {category.sources.map((s) => (
             <Row key={s.listId} style={styles.noWrap}>
               <View style={styles.flex}>
@@ -275,23 +275,23 @@ export default function CategoryEditor() {
                 </Muted>
               </View>
               <Button
-                label="↻"
+                label=""
                 small
                 variant="secondary"
                 onPress={() => {
                   setUrl(s.url);
                 }}
               />
-              <Button label="✕" small variant="ghost" onPress={() => removeSource(s.listId)} />
+              <Button label="" small variant="ghost" onPress={() => removeSource(s.listId)} />
             </Row>
           ))}
-          <Muted>↻ remet le lien dans le champ pour réimporter les nouveaux titres.</Muted>
+          <Muted>Réimporter remet le lien dans le champ pour réimporter les nouveaux titres.</Muted>
         </Card>
       )}
 
       <Card>
         <Row style={styles.spread}>
-          <Label>🎵 Morceaux ({category.tracks.length})</Label>
+          <Label>Morceaux ({category.tracks.length})</Label>
           {blockedCount > 0 && (
             <Button label={`Purger ${blockedCount} bloqué(s)`} small variant="danger" onPress={purgeBlocked} />
           )}
@@ -301,7 +301,7 @@ export default function CategoryEditor() {
             {selecting ? (
               <>
                 <Button
-                  label={`🗑️ Supprimer (${selected.length})`}
+                  label={`Supprimer (${selected.length})`}
                   small
                   variant="danger"
                   disabled={!selected.length}
@@ -324,12 +324,12 @@ export default function CategoryEditor() {
                 />
               </>
             ) : (
-              <Button label="☑️ Sélectionner plusieurs" small variant="secondary" onPress={() => setSelecting(true)} />
+              <Button label="Sélectionner plusieurs" small variant="secondary" onPress={() => setSelecting(true)} />
             )}
           </Row>
         )}
         {category.tracks.length > 8 && (
-          <Input value={search} onChangeText={setSearch} placeholder="🔍 Rechercher un titre ou un artiste" />
+          <Input value={search} onChangeText={setSearch} placeholder="Rechercher un titre ou un artiste" />
         )}
         {filtered.slice(0, limit).map((t) => (
           <TrackRow
@@ -361,7 +361,7 @@ export default function CategoryEditor() {
 
       {auth.enabled && (
         <Card>
-          <Label>🌍 Partager dans le hub communautaire</Label>
+          <Label>Partager dans le hub communautaire</Label>
           <Muted>Les autres joueurs pourront ajouter cette catégorie et y jouer.</Muted>
           {auth.session ? (
             <>
@@ -384,7 +384,7 @@ export default function CategoryEditor() {
         </Card>
       )}
 
-      <Button label="🗑️  Supprimer la catégorie" variant="danger" onPress={removeCategory} />
+      <Button label="Supprimer la catégorie" variant="danger" onPress={removeCategory} />
     </Screen>
   );
 }
@@ -433,15 +433,15 @@ function TrackRow({
           </Text>
           <Muted>
             {track.artist || '(artiste manquant)'}
-            {track.blocked ? ' · ⚠️ bloqué' : ''}
+            {track.blocked ? ' · bloqué' : ''}
             {track.disabled ? ' · désactivé' : ''}
-            {incomplete ? ' · ✏️ à compléter' : ''}
+            {incomplete ? ' · à compléter' : ''}
           </Muted>
         </View>
         {!selecting && (
           <>
-            <Button label={previewing ? '■' : '▶'} small variant="secondary" onPress={onPreview} />
-            <Button label="🗑️" small variant="ghost" onPress={onRemove} />
+            <Button label={previewing ? '' : ''} small variant="secondary" onPress={onPreview} />
+            <Button label="" small variant="ghost" onPress={onRemove} />
           </>
         )}
       </Pressable>
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     color: '#fff',
-    fontWeight: '900',
+    fontFamily: fonts.bold,
     overflow: 'hidden',
   },
   checkboxOn: { backgroundColor: colors.danger, borderColor: colors.danger },
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: colors.border,
   },
-  trackTitle: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  trackTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 15 },
   editor: { gap: 8, paddingTop: 4 },
   startInput: { width: 80, textAlign: 'center' },
 });

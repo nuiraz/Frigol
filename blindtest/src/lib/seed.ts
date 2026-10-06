@@ -11,7 +11,7 @@ const demoCategories: Category[] = [
     id: 'demo-80s',
     name: 'Années 80',
     emoji: '📼',
-    color: '#FF4FD8',
+    color: '#C08CFF',
     sources: [],
     tracks: [
       t('djV11Xbc914', 'a-ha', 'Take On Me'),
@@ -27,7 +27,7 @@ const demoCategories: Category[] = [
     id: 'demo-pop',
     name: 'Hits Pop',
     emoji: '🎤',
-    color: '#4FC3FF',
+    color: '#5AA9FF',
     sources: [],
     tracks: [
       t('kJQP7kiw5Fk', 'Luis Fonsi', 'Despacito'),
@@ -50,7 +50,7 @@ const demoCategories: Category[] = [
     id: 'demo-rock',
     name: 'Rock',
     emoji: '🎸',
-    color: '#FFB020',
+    color: '#FF5544',
     sources: [],
     tracks: [
       t('fJ9rUzIMcZQ', 'Queen', 'Bohemian Rhapsody'),

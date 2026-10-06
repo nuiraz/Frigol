@@ -153,3 +153,39 @@ create table if not exists public.reports (
 alter table public.reports enable row level security;
 drop policy if exists "signaler" on public.reports;
 create policy "signaler" on public.reports for insert to authenticated with check (auth.uid() = user_id);
+
+-- =============================================================
+-- Catalogue partagé : les catégories et playlists importées par
+-- l'administrateur sont envoyées ici et apparaissent sur tous les
+-- appareils (téléphones, autres PC), même sans compte.
+-- =============================================================
+alter table public.profiles add column if not exists is_admin boolean not null default false;
+-- Un joueur ne peut modifier que son pseudo et son avatar (jamais is_admin).
+revoke update on public.profiles from authenticated, anon;
+grant update (username, avatar) on public.profiles to authenticated;
+
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select is_admin from profiles where id = auth.uid()), false);
+$$;
+
+create table if not exists public.catalog_categories (
+  id text primary key check (char_length(id) <= 40),
+  name text not null check (char_length(name) between 1 and 60),
+  emoji text not null default '🎵' check (char_length(emoji) <= 8),
+  color text not null default '#F5C518',
+  tracks jsonb not null default '[]' check (jsonb_typeof(tracks) = 'array' and jsonb_array_length(tracks) <= 2000),
+  sources jsonb not null default '[]' check (jsonb_typeof(sources) = 'array'),
+  position int not null default 0,
+  updated_at timestamptz not null default now()
+);
+alter table public.catalog_categories enable row level security;
+drop policy if exists "catalogue public" on public.catalog_categories;
+create policy "catalogue public" on public.catalog_categories for select using (true);
+drop policy if exists "catalogue géré par l'admin" on public.catalog_categories;
+create policy "catalogue géré par l'admin" on public.catalog_categories
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- Pour devenir administrateur, après avoir créé ton compte dans l'app, exécute
+-- (en remplaçant le pseudo) :
+--   update public.profiles set is_admin = true where username = 'TonPseudo';

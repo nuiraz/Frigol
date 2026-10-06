@@ -7,7 +7,7 @@ import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/componen
 import { useAuth } from '@/lib/auth';
 import { confirmAction, notify } from '@/lib/dialogs';
 import { getSupabase } from '@/lib/supabase';
-import { colors } from '@/lib/theme';
+import { colors, fonts } from '@/lib/theme';
 
 const AVATARS = [
   '🎧',
@@ -78,14 +78,14 @@ function AuthForms() {
       } else if (mode === 'signup') {
         const { needsConfirmation } = await auth.signUp(mail, password, username.trim(), avatar);
         if (needsConfirmation) {
-          setInfo('📩 Compte créé ! Clique sur le lien reçu par e-mail pour l’activer, puis connecte-toi.');
+          setInfo('Compte créé ! Clique sur le lien reçu par e-mail pour l’activer, puis connecte-toi.');
           setMode('login');
         } else {
           router.back();
         }
       } else {
         await auth.resetPassword(mail);
-        setInfo('📩 Si un compte existe pour cet e-mail, un lien pour changer le mot de passe vient d’être envoyé.');
+        setInfo('Si un compte existe pour cet e-mail, un lien pour changer le mot de passe vient d’être envoyé.');
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -97,7 +97,6 @@ function AuthForms() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text style={styles.heroIcon}>{mode === 'signup' ? avatar : '👤'}</Text>
         <Text style={styles.heroTitle}>
           {mode === 'login' ? 'Connexion' : mode === 'signup' ? 'Créer un compte' : 'Mot de passe oublié'}
         </Text>
@@ -170,7 +169,7 @@ function AuthForms() {
         {mode === 'login' ? (
           <Button label="Mot de passe oublié ?" variant="ghost" small onPress={() => setMode('forgot')} />
         ) : mode === 'forgot' ? (
-          <Button label="← Retour à la connexion" variant="ghost" small onPress={() => setMode('login')} />
+          <Button label="Retour à la connexion" variant="ghost" small onPress={() => setMode('login')} />
         ) : null}
       </Card>
     </Screen>
@@ -196,7 +195,7 @@ function NewPassword() {
   return (
     <Screen>
       <Card>
-        <Label>🔑 Nouveau mot de passe</Label>
+        <Label>Nouveau mot de passe</Label>
         <Input value={password} onChangeText={setPassword} secureTextEntry placeholder="6 caractères minimum" />
         <Button label="Enregistrer" loading={busy} onPress={save} />
       </Card>
@@ -249,7 +248,7 @@ function ProfileView() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text style={styles.heroIcon}>{profile?.avatar ?? '🎧'}</Text>
+        <Text style={styles.heroIcon}>{profile?.avatar ?? '?'}</Text>
         <Text style={styles.heroTitle}>{profile?.username ?? '…'}</Text>
         <Muted>{auth.session?.user.email}</Muted>
       </View>
@@ -265,11 +264,7 @@ function ProfileView() {
         </Card>
       </Row>
 
-      <Button
-        label="🌍  Voir le classement mondial"
-        color={colors.secondary}
-        onPress={() => router.push('/leaderboard')}
-      />
+      <Button label="Voir le classement mondial" color={colors.accent} onPress={() => router.push('/leaderboard')} />
 
       <Card>
         <Label>Avatar</Label>
@@ -299,7 +294,14 @@ function ProfileView() {
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 6, paddingVertical: 16 },
   heroIcon: { fontSize: 64 },
-  heroTitle: { color: colors.text, fontSize: 28, fontWeight: '900' },
+  heroTitle: {
+    fontFamily: fonts.display,
+    color: colors.text,
+    fontSize: 40,
+    lineHeight: 46,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
   center: { textAlign: 'center' },
   tabs: { justifyContent: 'center' },
   consent: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
@@ -312,17 +314,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     color: '#090914',
-    fontWeight: '900',
+    fontFamily: fonts.bold,
     overflow: 'hidden',
   },
   boxOn: { backgroundColor: colors.success, borderColor: colors.success },
   consentText: { color: colors.muted, flex: 1, lineHeight: 20 },
-  link: { color: colors.secondary, textDecorationLine: 'underline' },
-  error: { color: colors.danger, fontWeight: '700' },
-  info: { color: colors.success, fontWeight: '700' },
+  link: { color: colors.accent, textDecorationLine: 'underline' },
+  error: { color: colors.danger, fontFamily: fonts.bold },
+  info: { color: colors.success, fontFamily: fonts.bold },
   stats: { flexWrap: 'nowrap' },
   stat: { flex: 1, alignItems: 'center' },
-  statValue: { color: colors.warning, fontSize: 28, fontWeight: '900' },
+  statValue: { color: colors.accent, fontSize: 28, fontFamily: fonts.bold },
   noWrap: { flexWrap: 'nowrap' },
   flex: { flex: 1 },
 });

@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { OnlineGate } from '@/components/online-gate';
-import { Button, Chip, Input, Muted, Row, Screen } from '@/components/ui';
+import { Button, Chip, Icon, Input, Muted, Row, Screen } from '@/components/ui';
 import { listSharedPlaylists, type SharedPlaylist } from '@/lib/online';
-import { colors } from '@/lib/theme';
+import { colors, fonts } from '@/lib/theme';
 
 type Item = Omit<SharedPlaylist, 'tracks'>;
 
@@ -43,31 +43,25 @@ function Hub() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text style={styles.icon}>👥</Text>
         <Text style={styles.title}>Hub communautaire</Text>
         <Muted style={styles.center}>
           Les playlists de blind test partagées par les joueurs. Ajoute-les en un clic !
         </Muted>
       </View>
 
-      <Input value={search} onChangeText={setSearch} placeholder="🔍 Rechercher : rap, disney, 80s…" />
+      <Input value={search} onChangeText={setSearch} placeholder="Rechercher : rap, disney, années 80…" />
       <Row style={styles.spread}>
         <Row>
-          <Chip label="🔥 Populaires" selected={order === 'likes'} onPress={() => setOrder('likes')} />
-          <Chip label="🆕 Récentes" selected={order === 'recent'} onPress={() => setOrder('recent')} />
+          <Chip label="Populaires" selected={order === 'likes'} onPress={() => setOrder('likes')} />
+          <Chip label="Récentes" selected={order === 'recent'} onPress={() => setOrder('recent')} />
         </Row>
       </Row>
-      <Button
-        label="➕  Partager une de mes catégories"
-        small
-        variant="secondary"
-        onPress={() => router.push('/admin')}
-      />
+      <Button label="Partager une de mes catégories" small variant="secondary" onPress={() => router.push('/admin')} />
 
       {error ? (
         <Text style={styles.error}>{error}</Text>
       ) : !items ? (
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.accent} />
       ) : items.length === 0 ? (
         <Muted style={styles.center}>Aucune playlist pour l’instant. Partage la première depuis l’admin !</Muted>
       ) : (
@@ -86,8 +80,14 @@ function Hub() {
               </Muted>
             </View>
             <View style={styles.counters}>
-              <Text style={styles.counter}>❤️ {p.likes_count}</Text>
-              <Text style={styles.counterMuted}>▶ {p.plays_count}</Text>
+              <View style={styles.counterRow}>
+                <Icon name="heart" size={13} color={colors.text} />
+                <Text style={styles.counter}>{p.likes_count}</Text>
+              </View>
+              <View style={styles.counterRow}>
+                <Icon name="play" size={12} color={colors.muted} />
+                <Text style={styles.counterMuted}>{p.plays_count}</Text>
+              </View>
             </View>
           </Pressable>
         ))
@@ -99,7 +99,8 @@ function Hub() {
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 4, paddingTop: 8 },
   icon: { fontSize: 52 },
-  title: { color: colors.text, fontSize: 26, fontWeight: '900' },
+  title: { fontFamily: fonts.display, color: colors.text, fontSize: 40, lineHeight: 46, textTransform: 'uppercase' },
+  counterRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   center: { textAlign: 'center' },
   spread: { justifyContent: 'space-between' },
   error: { color: colors.danger },
@@ -115,8 +116,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.75 },
   emoji: { fontSize: 30 },
   flex: { flex: 1 },
-  name: { color: colors.text, fontWeight: '800', fontSize: 16 },
+  name: { color: colors.text, fontFamily: fonts.bold, fontSize: 16 },
   counters: { alignItems: 'flex-end', gap: 2 },
-  counter: { color: colors.text, fontWeight: '800' },
-  counterMuted: { color: colors.muted, fontWeight: '700', fontSize: 12 },
+  counter: { color: colors.text, fontFamily: fonts.bold },
+  counterMuted: { color: colors.muted, fontFamily: fonts.bold, fontSize: 12 },
 });

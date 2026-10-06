@@ -10,7 +10,7 @@ import { useAdminGuard } from '@/lib/admin-session';
 import { notify } from '@/lib/dialogs';
 import { readYouTubeLink, type ImportResult } from '@/lib/importer';
 import { useStore } from '@/lib/store';
-import { CATEGORY_COLORS, colors } from '@/lib/theme';
+import { CATEGORY_COLORS, colors, fonts } from '@/lib/theme';
 import { thumbnailUrl } from '@/lib/youtube';
 
 const EMOJIS = ['🎵', '🎸', '🎤', '📼', '💿', '🎹', '🥁', '🎻', '🎷', '🪩', '🎬', '📺', '🧸', '🇫🇷', '🔥', '❤️'];
@@ -102,7 +102,7 @@ export default function ImportPlaylist() {
       <YouTubePlayer ref={player} onEvent={onPlayerEvent} />
 
       <Card>
-        <Label>① Colle le lien YouTube Music</Label>
+        <Label>Colle le lien YouTube Music</Label>
         <Muted>
           Dans YouTube Music : ouvre la playlist → ⋮ ou « Partager » → « Copier le lien ». Ça marche aussi avec YouTube,
           les albums et un morceau seul.
@@ -115,13 +115,13 @@ export default function ImportPlaylist() {
           autoCorrect={false}
           onSubmitEditing={analyse}
         />
-        <Button label="🔍  Lire la playlist" loading={busy} disabled={!url.trim()} onPress={analyse} />
+        <Button label="Lire la playlist" loading={busy} disabled={!url.trim()} onPress={analyse} />
         {!!progress && <Muted>{progress}</Muted>}
       </Card>
 
       {done && doneCategory && (
         <Card style={styles.success}>
-          <Text style={styles.successTitle}>✅ Import terminé</Text>
+          <Text style={styles.successTitle}>Import terminé</Text>
           <Muted>
             {done.added} morceau(x) ajouté(s) à {doneCategory.emoji} {doneCategory.name}
             {done.added < done.total ? ` (${done.total - done.added} déjà présent(s))` : ''}.
@@ -142,7 +142,7 @@ export default function ImportPlaylist() {
         <>
           <Card>
             <Label>
-              {result.kind === 'playlist' ? '🎶 ' : '🎵 '}
+              {result.kind === 'playlist' ? '' : ''}
               {result.title}
             </Label>
             <Muted>{result.tracks.length} morceau(x) trouvé(s)</Muted>
@@ -161,13 +161,13 @@ export default function ImportPlaylist() {
           </Card>
 
           <Card>
-            <Label>② Dans quelle catégorie ?</Label>
+            <Label>Dans quelle catégorie ?</Label>
             <View style={styles.grid}>
               <CategoryOption
-                emoji="➕"
+                emoji="+"
                 name="Nouvelle"
                 sub="catégorie"
-                color={colors.violet}
+                color={colors.accent}
                 selected={target === NEW}
                 onPress={() => setTarget(NEW)}
               />
@@ -206,9 +206,9 @@ export default function ImportPlaylist() {
           </Card>
 
           <Button
-            label={`📥  Importer ${result.tracks.length} morceau(x)`}
+            label={`Importer ${result.tracks.length} morceau(x)`}
             color={
-              target === NEW ? color : (store.data.categories.find((c) => c.id === target)?.color ?? colors.primary)
+              target === NEW ? color : (store.data.categories.find((c) => c.id === target)?.color ?? colors.accent)
             }
             onPress={confirmImport}
           />
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   noWrap: { flexWrap: 'nowrap' },
   thumb: { width: 64, height: 36, borderRadius: 6, backgroundColor: colors.border },
-  trackTitle: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  trackTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 15 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   option: {
     flexGrow: 1,
@@ -272,12 +272,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   optionEmoji: { fontSize: 26 },
-  optionName: { color: colors.text, fontWeight: '800', fontSize: 14 },
-  optionSub: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  optionName: { color: colors.text, fontFamily: fonts.bold, fontSize: 14 },
+  optionSub: { color: colors.muted, fontSize: 12, fontFamily: fonts.bold },
   newCat: { gap: 10 },
   swatch: { width: 32, height: 32, borderRadius: 16 },
   swatchOn: { borderWidth: 3, borderColor: colors.text },
   success: { borderColor: colors.success },
-  successTitle: { color: colors.success, fontSize: 18, fontWeight: '900' },
+  successTitle: { color: colors.success, fontSize: 18, fontFamily: fonts.bold },
   tip: { fontSize: 12, textAlign: 'center' },
 });

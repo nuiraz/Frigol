@@ -1,47 +1,13 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Backdrop, Card, Label, Muted } from '@/components/ui';
-import { Vinyl } from '@/components/vinyl';
+import { Button, Card, Divider, IconButton, Label, ListRow, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { getDifficulty } from '@/lib/game';
 import { quickPlay } from '@/lib/quick-play';
 import { playableTracks, useStore } from '@/lib/store';
-import { colors, shade } from '@/lib/theme';
-
-function Tile({
-  emoji,
-  title,
-  subtitle,
-  color,
-  onPress,
-  wide,
-}: {
-  emoji: string;
-  title: string;
-  subtitle: string;
-  color: string;
-  onPress: () => void;
-  wide?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [wide ? styles.tileWide : styles.tileWrap, pressed && styles.pressed]}>
-      <LinearGradient
-        colors={[color, shade(color, 0.55)]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.tile}>
-        <Text style={styles.tileEmoji}>{emoji}</Text>
-        <Text style={styles.tileTitle}>{title}</Text>
-        <Text style={styles.tileSub}>{subtitle}</Text>
-      </LinearGradient>
-    </Pressable>
-  );
-}
+import { colors, fonts } from '@/lib/theme';
 
 export default function Home() {
   const { data } = useStore();
@@ -50,149 +16,150 @@ export default function Home() {
   const totalTracks = categories.reduce((n, c) => n + playableTracks(c).length, 0);
   const scores = Object.entries(data.bestScores)
     .sort((a, b) => b[1].score - a[1].score)
-    .slice(0, 5);
+    .slice(0, 3);
 
   const categoryName = (key: string) => {
-    if (key === 'all') return '🎲 Toutes catégories';
+    if (key === 'all') return 'Toutes catégories';
     const names = key
       .split(',')
-      .map((id) => data.categories.find((c) => c.id === id))
-      .filter(Boolean)
-      .map((c) => `${c!.emoji} ${c!.name}`);
+      .map((id) => data.categories.find((c) => c.id === id)?.name)
+      .filter(Boolean);
     return names.join(', ') || 'Catégorie supprimée';
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Backdrop />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topBar}>
-          <Pressable onPress={() => router.push('/account')} style={styles.iconButton}>
-            <Text style={styles.iconText} numberOfLines={1}>
-              {auth.profile ? `${auth.profile.avatar} ${auth.profile.username}` : '👤 Connexion'}
-            </Text>
-          </Pressable>
-          <View style={styles.topRight}>
-            <Pressable onPress={() => router.push('/admin/import')} style={styles.iconButton}>
-              <Text style={styles.iconText}>📥 Importer</Text>
-            </Pressable>
-            <Pressable onPress={() => router.push('/share')} style={styles.iconButton}>
-              <Text style={styles.iconText}>📱 QR</Text>
-            </Pressable>
+          <Text style={styles.wordmark}>
+            BLIND<Text style={styles.wordmarkAccent}>/</Text>TEST
+          </Text>
+          <View style={styles.topActions}>
+            <IconButton icon="share-2" label="Inviter" onPress={() => router.push('/share')} />
+            {auth.profile ? (
+              <Pressable onPress={() => router.push('/account')} style={styles.avatar} accessibilityLabel="Compte">
+                <Text style={styles.avatarEmoji}>{auth.profile.avatar}</Text>
+              </Pressable>
+            ) : (
+              <IconButton icon="user" label="Compte" onPress={() => router.push('/account')} />
+            )}
           </View>
         </View>
 
         <View style={styles.hero}>
-          <Vinyl active color={colors.primary} size={150} label="♪" />
-          <Text style={styles.title}>BLIND TEST</Text>
-          <Muted style={styles.center}>
-            {categories.length} catégories · {totalTracks} morceaux
-          </Muted>
+          <Text style={styles.headline}>
+            Devine{'\n'}le son<Text style={styles.accent}>.</Text>
+          </Text>
+          <Txt variant="muted">
+            {totalTracks} morceaux · {categories.length} catégories
+            {auth.profile ? ` · Salut ${auth.profile.username}` : ''}
+          </Txt>
         </View>
 
-        <Tile
-          wide
-          emoji="🎲"
-          title="Lecture aléatoire"
-          subtitle="Morceaux au hasard, depuis le début, lancement automatique"
-          color={colors.violet}
-          onPress={() => quickPlay()}
-        />
-        <View style={styles.grid}>
-          <Tile
-            emoji="🎵"
-            title="Solo"
-            subtitle="Choisis ton niveau"
-            color={colors.primary}
+        <View style={styles.cta}>
+          <Button label="Lancer une partie" icon="play" onPress={() => quickPlay()} disabled={!totalTracks} />
+          <Txt variant="small" style={styles.ctaHint}>
+            10 morceaux au hasard, extrait depuis le début, niveau facile
+          </Txt>
+        </View>
+
+        <Card style={styles.menu}>
+          <ListRow
+            icon="sliders"
+            title="Partie personnalisée"
+            subtitle="Niveau, catégories, mode 1 seconde…"
             onPress={() => router.push({ pathname: '/setup', params: { mode: 'solo' } })}
           />
-          <Tile
-            emoji="🎉"
-            title="Soirée"
-            subtitle="Entre amis"
-            color={colors.secondary}
+          <Divider />
+          <ListRow
+            icon="users"
+            title="Soirée entre amis"
+            subtitle="Plusieurs joueurs, un seul écran"
             onPress={() => router.push({ pathname: '/setup', params: { mode: 'soiree' } })}
           />
-        </View>
-
-        <View style={styles.grid}>
-          <Tile
-            emoji="🌍"
-            title="Classement"
-            subtitle="Mondial"
-            color={colors.warning}
+          <Divider />
+          <ListRow
+            icon="bar-chart-2"
+            title="Classement mondial"
+            subtitle="Les meilleurs scores des joueurs"
             onPress={() => router.push('/leaderboard')}
           />
-          <Tile
-            emoji="👥"
-            title="Hub"
-            subtitle="Playlists de la commu"
-            color={colors.success}
+          <Divider />
+          <ListRow
+            icon="globe"
+            title="Communauté"
+            subtitle="Playlists partagées par les joueurs"
             onPress={() => router.push('/hub')}
           />
-        </View>
+          <Divider />
+          <ListRow
+            icon="download"
+            title="Importer une playlist"
+            subtitle="Depuis YouTube Music"
+            onPress={() => router.push('/admin/import')}
+          />
+        </Card>
 
         {categories.length > 0 && (
-          <>
-            <Label style={styles.section}>⚡ Partie rapide par catégorie</Label>
+          <View style={styles.section}>
+            <Label>Jouer une catégorie</Label>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
               {categories.map((c) => (
                 <Pressable
                   key={c.id}
                   onPress={() => quickPlay(c.id)}
-                  style={({ pressed }) => [styles.cat, { borderColor: c.color }, pressed && styles.pressed]}>
-                  <Text style={styles.catEmoji}>{c.emoji}</Text>
-                  <Text style={styles.catName} numberOfLines={1}>
+                  style={({ pressed }) => [styles.cat, pressed && styles.pressed]}>
+                  <View style={[styles.catSwatch, { backgroundColor: c.color }]}>
+                    <Text style={styles.catEmoji}>{c.emoji}</Text>
+                  </View>
+                  <Txt variant="strong" numberOfLines={1}>
                     {c.name}
-                  </Text>
-                  <Text style={[styles.catCount, { color: c.color }]}>{playableTracks(c).length} titres</Text>
+                  </Txt>
+                  <Txt variant="small">{playableTracks(c).length} titres</Txt>
                 </Pressable>
               ))}
             </ScrollView>
-          </>
+          </View>
         )}
 
-        <Card>
-          <Label>🏆 Meilleurs scores</Label>
-          {scores.length === 0 ? (
-            <Muted>Aucun score pour l’instant. À toi de jouer !</Muted>
-          ) : (
-            scores.map(([key, s], i) => {
-              const [cat, diff] = key.split('|');
-              const d = getDifficulty(diff);
-              return (
-                <View key={key} style={styles.scoreRow}>
-                  <Text style={styles.rank}>{['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`}</Text>
-                  <View style={styles.flex}>
-                    <Text style={styles.scoreCat} numberOfLines={1}>
-                      {categoryName(cat)}
-                    </Text>
-                    <Muted>
-                      {d.emoji} {d.label}
-                    </Muted>
+        {scores.length > 0 && (
+          <View style={styles.section}>
+            <Label>Tes records</Label>
+            <Card style={styles.menu}>
+              {scores.map(([key, s], i) => {
+                const [cat, diff] = key.split('|');
+                const d = getDifficulty(diff);
+                return (
+                  <View key={key}>
+                    {i > 0 && <View style={styles.thinDivider} />}
+                    <View style={styles.scoreRow}>
+                      <Text style={styles.rank}>{i + 1}</Text>
+                      <View style={styles.flex}>
+                        <Txt variant="strong" numberOfLines={1}>
+                          {categoryName(cat)}
+                        </Txt>
+                        <Txt variant="small">{d.label}</Txt>
+                      </View>
+                      <Text style={styles.score}>{s.score}</Text>
+                    </View>
                   </View>
-                  <Text style={styles.score}>{s.score}</Text>
-                </View>
-              );
-            })
-          )}
-        </Card>
+                );
+              })}
+            </Card>
+          </View>
+        )}
 
-        <Pressable onPress={() => router.push('/admin')} style={styles.adminLink}>
-          <Text style={styles.adminText}>🔒 Administration</Text>
-        </Pressable>
         <View style={styles.footer}>
-          <Text style={styles.footerLink} onPress={() => router.push('/legal/mentions')}>
-            Mentions légales
-          </Text>
-          <Text style={styles.footerDot}>·</Text>
-          <Text style={styles.footerLink} onPress={() => router.push('/legal/cgu')}>
-            CGU
-          </Text>
-          <Text style={styles.footerDot}>·</Text>
-          <Text style={styles.footerLink} onPress={() => router.push('/legal/confidentialite')}>
-            Confidentialité
-          </Text>
+          {[
+            ['Administration', '/admin'],
+            ['Mentions légales', '/legal/mentions'],
+            ['CGU', '/legal/cgu'],
+            ['Confidentialité', '/legal/confidentialite'],
+          ].map(([label, href]) => (
+            <Text key={href} style={styles.footerLink} onPress={() => router.push(href as never)}>
+              {label}
+            </Text>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -201,59 +168,37 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, gap: 14, width: '100%', maxWidth: 720, alignSelf: 'center' },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between' },
-  topRight: { flexDirection: 'row', gap: 8 },
-  adminLink: { alignSelf: 'center', padding: 8 },
-  adminText: { color: colors.muted, fontWeight: '700' },
-  footer: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 8 },
-  footerLink: { color: colors.muted, fontSize: 12, textDecorationLine: 'underline' },
-  footerDot: { color: colors.muted, fontSize: 12 },
-  iconButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    maxWidth: 180,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: colors.border,
+  content: { padding: 20, gap: 24, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  wordmark: { fontFamily: fonts.display, color: colors.text, fontSize: 20, letterSpacing: 1 },
+  wordmarkAccent: { color: colors.accent },
+  topActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
   },
-  iconText: { color: colors.text, fontWeight: '700', fontSize: 13 },
-  hero: { alignItems: 'center', paddingVertical: 18, gap: 10 },
-  title: {
-    color: colors.text,
-    fontSize: 42,
-    fontWeight: '900',
-    letterSpacing: 5,
-    textShadowColor: colors.primary,
-    textShadowRadius: 18,
-    textShadowOffset: { width: 0, height: 0 },
-  },
-  center: { textAlign: 'center' },
-  grid: { flexDirection: 'row', gap: 12 },
-  tileWrap: { flex: 1, borderRadius: 22 },
-  tileWide: { borderRadius: 22 },
-  tile: { borderRadius: 22, padding: 18, gap: 4, minHeight: 120, justifyContent: 'flex-end' },
-  tileEmoji: { fontSize: 34 },
-  tileTitle: { color: '#fff', fontSize: 21, fontWeight: '900' },
-  tileSub: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
-  section: { marginTop: 4 },
-  catRow: { gap: 10, paddingRight: 16, alignItems: 'flex-start' },
-  cat: {
-    width: 128,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    gap: 4,
-  },
-  catEmoji: { fontSize: 30 },
-  catName: { color: colors.text, fontWeight: '800', fontSize: 15 },
-  catCount: { fontWeight: '700', fontSize: 12 },
-  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  rank: { fontSize: 20, width: 30, textAlign: 'center', color: colors.muted },
-  flex: { flex: 1 },
-  scoreCat: { color: colors.text, fontWeight: '700' },
-  score: { color: colors.warning, fontWeight: '900', fontSize: 20 },
+  avatarEmoji: { fontSize: 22 },
+  hero: { gap: 10, paddingTop: 12 },
+  headline: { fontFamily: fonts.display, color: colors.text, fontSize: 76, lineHeight: 78, textTransform: 'uppercase' },
+  accent: { color: colors.accent },
+  cta: { gap: 8 },
+  ctaHint: { textAlign: 'center' },
+  menu: { padding: 0, gap: 0, overflow: 'hidden' },
+  section: { gap: 12 },
+  catRow: { gap: 12, paddingRight: 20 },
+  cat: { width: 120, gap: 6 },
+  catSwatch: { width: 120, height: 120, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  catEmoji: { fontSize: 44 },
+  pressed: { opacity: 0.7 },
+  thinDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
+  rank: { fontFamily: fonts.display, color: colors.faint, fontSize: 22, width: 18 },
+  flex: { flex: 1, gap: 2 },
+  score: { fontFamily: fonts.display, color: colors.accent, fontSize: 26 },
+  footer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16, paddingVertical: 8 },
+  footerLink: { fontFamily: fonts.regular, color: colors.faint, fontSize: 12 },
 });

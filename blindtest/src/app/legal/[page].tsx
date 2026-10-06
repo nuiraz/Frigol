@@ -4,7 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 import { Card, Muted, Screen } from '@/components/ui';
 import { LEGAL } from '@/lib/config';
 import { LEGAL_PAGES } from '@/lib/legal';
-import { colors } from '@/lib/theme';
+import { colors, fonts } from '@/lib/theme';
 
 export default function LegalScreen() {
   const { page } = useLocalSearchParams<{ page: string }>();
@@ -29,7 +29,7 @@ export function generateStaticParams() {
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.text, fontSize: 26, fontWeight: '900' },
-  heading: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  title: { color: colors.text, fontSize: 26, fontFamily: fonts.bold },
+  heading: { color: colors.text, fontSize: 17, fontFamily: fonts.bold },
   body: { color: colors.muted, fontSize: 15, lineHeight: 22 },
 });

@@ -9,6 +9,8 @@ export type Difficulty = {
   id: string;
   label: string;
   emoji: string;
+  /** Repère court affiché à la place d'une icône (durée de l'extrait). */
+  badge: string;
   description: string;
   /** Durée de l'extrait en secondes. */
   snippet: number;
@@ -28,35 +30,38 @@ export const DIFFICULTIES: Difficulty[] = [
     id: 'facile',
     label: 'Facile',
     emoji: '🟢',
-    description: 'Extrait de 15 s, 4 propositions, 2 réécoutes',
+    badge: '15s',
+    description: 'Extrait de 15 s · 3 propositions · 2 réécoutes',
     snippet: 15,
     replays: 2,
     answerTime: 30,
-    choices: 4,
+    choices: 3,
     answerMode: 'qcm',
     startMode: 'random',
     basePoints: 100,
-    color: '#2EE59D',
+    color: '#38D47A',
   },
   {
     id: 'moyen',
     label: 'Moyen',
     emoji: '🟠',
-    description: 'Extrait de 7 s, 6 propositions, 1 réécoute',
+    badge: '7s',
+    description: 'Extrait de 7 s · 4 propositions · 1 réécoute',
     snippet: 7,
     replays: 1,
     answerTime: 20,
-    choices: 6,
+    choices: 4,
     answerMode: 'qcm',
     startMode: 'random',
     basePoints: 200,
-    color: '#FFB020',
+    color: '#F5C518',
   },
   {
     id: 'dur',
     label: 'Difficile',
     emoji: '🔴',
-    description: 'Extrait de 4 s, réponse à écrire, aucune réécoute',
+    badge: '4s',
+    description: 'Extrait de 4 s · réponse à écrire · sans réécoute',
     snippet: 4,
     replays: 0,
     answerTime: 25,
@@ -64,13 +69,14 @@ export const DIFFICULTIES: Difficulty[] = [
     answerMode: 'texte',
     startMode: 'random',
     basePoints: 400,
-    color: '#FF5470',
+    color: '#FF5544',
   },
   {
     id: 'une-seconde',
     label: '1 seconde',
     emoji: '⚡',
-    description: '1 seule seconde de musique ! 3 réécoutes, 4 propositions',
+    badge: '1s',
+    description: 'Une seule seconde · 4 propositions · 3 réécoutes',
     snippet: 1,
     replays: 3,
     answerTime: 20,
@@ -78,13 +84,14 @@ export const DIFFICULTIES: Difficulty[] = [
     answerMode: 'qcm',
     startMode: 'random',
     basePoints: 500,
-    color: '#B36BFF',
+    color: '#C08CFF',
   },
   {
     id: 'intro',
     label: 'Intro',
     emoji: '🎬',
-    description: 'Les 3 premières secondes du morceau, réponse à écrire',
+    badge: 'INTRO',
+    description: 'Les 3 premières secondes · réponse à écrire',
     snippet: 3,
     replays: 1,
     answerTime: 25,
@@ -92,7 +99,7 @@ export const DIFFICULTIES: Difficulty[] = [
     answerMode: 'texte',
     startMode: 'intro',
     basePoints: 350,
-    color: '#4FC3FF',
+    color: '#5AA9FF',
   },
 ];
 

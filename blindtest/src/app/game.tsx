@@ -2,10 +2,11 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/components/ui';
-import { Vinyl } from '@/components/vinyl';
+import { Pop, RoundTrack, SoundBars, TimerRing } from '@/components/game-ui';
+import { Button, Card, Chip, Icon, IconButton, Input, Label, Row, Txt } from '@/components/ui';
 import { YouTubePlayer } from '@/components/youtube-player';
 import type { PlayerEvent, PlayerHandle } from '@/components/youtube-player.types';
 import {
@@ -21,7 +22,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { submitOnlineScore } from '@/lib/online';
 import { playableTracks, useStore } from '@/lib/store';
-import { colors } from '@/lib/theme';
+import { colors, fonts } from '@/lib/theme';
 import type { Track } from '@/lib/types';
 import { BLOCKED_ERRORS, thumbnailUrl } from '@/lib/youtube';
 
@@ -36,17 +37,6 @@ type RoundResult = {
 };
 
 const REVEAL_SECONDS = 12;
-const CHOICE_COLORS = [colors.primary, colors.secondary, colors.warning, colors.violet, colors.success, colors.danger];
-
-/** Petite animation d'apparition (rejouée à chaque changement de `key`). */
-function Pop({ children, style }: { children: React.ReactNode; style?: object }) {
-  const [scale] = useState(() => new Animated.Value(0.4));
-  useEffect(() => {
-    Animated.spring(scale, { toValue: 1, friction: 5, tension: 160, useNativeDriver: true }).start();
-  }, [scale]);
-  return <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>;
-}
-
 function feedback(type: Haptics.NotificationFeedbackType) {
   if (Platform.OS !== 'web') Haptics.notificationAsync(type).catch(() => {});
 }
@@ -299,227 +289,235 @@ export default function Game() {
     nextTrack(done);
   }
 
-  const header = (
-    <Row style={styles.header}>
-      <Text style={styles.roundText}>
-        Manche {Math.min(round, totalRounds)}/{totalRounds}
-      </Text>
-      <Text style={[styles.badge, { color: difficulty.color }]}>
-        {difficulty.emoji} {difficulty.label}
-      </Text>
-      {!party && <Text style={styles.scoreText}>{score} pts</Text>}
-    </Row>
-  );
-
   if (phase === 'finished') {
     return renderSummary();
   }
 
   const listening = phase === 'listening';
+  const revealed = phase === 'reveal';
   const canReplay = phase === 'answering' && replaysUsed < difficulty.replays;
   const lastResult = results[results.length - 1];
+  const timed = !party && deadline != null && !revealed;
+  const ringColor = timed && timeLeft < 5 ? colors.danger : difficulty.color;
+  const question = target === 'artiste' ? 'Quel artiste ?' : target === 'titre' ? 'Quel titre ?' : 'Titre ou artiste ?';
+  const caption =
+    phase === 'loading'
+      ? 'Chargement du morceau'
+      : phase === 'countdown'
+        ? 'Prépare-toi'
+        : phase === 'ready'
+          ? difficulty.snippet === 1
+            ? 'Une seule seconde. Concentre-toi.'
+            : `Extrait de ${difficulty.snippet} secondes`
+          : listening
+            ? stalled
+              ? 'Touche pour lancer le son'
+              : 'Écoute…'
+            : party
+              ? 'Qui a trouvé ?'
+              : question;
 
   return (
-    <Screen>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <YouTubePlayer ref={player} onEvent={onPlayerEvent} />
-      {header}
-
-      {!party && deadline != null && phase !== 'reveal' && (
-        <View style={styles.timerTrack}>
-          <View
-            style={[
-              styles.timerBar,
-              {
-                width: `${(timeLeft / difficulty.answerTime) * 100}%`,
-                backgroundColor: timeLeft < 5 ? colors.danger : difficulty.color,
-              },
-            ]}
-          />
-        </View>
-      )}
-
-      {phase !== 'reveal' ? (
-        <Card style={styles.stage}>
-          <View style={styles.vinylBox}>
-            <Vinyl
-              active={listening && deadline != null}
-              color={difficulty.color}
-              size={190}
-              label={phase === 'countdown' ? undefined : difficulty.emoji}
-            />
-            {phase === 'countdown' && (
-              <Pop key={countdown} style={styles.overlay}>
-                <Text style={[styles.countdown, { textShadowColor: difficulty.color }]}>{countdown}</Text>
-              </Pop>
-            )}
-            {(phase === 'ready' || (listening && stalled)) && (
-              <Pressable
-                onPress={listening ? startListening : listen}
-                style={[styles.overlay, styles.playButton, { backgroundColor: difficulty.color }]}>
-                <Text style={styles.playIcon}>▶</Text>
-              </Pressable>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.topBar}>
+          <IconButton icon="x" label="Quitter la partie" onPress={() => router.back()} />
+          <View style={styles.topCenter}>
+            <Text style={styles.roundNum}>
+              {pad(Math.min(round, totalRounds))}
+              <Text style={styles.roundTotal}> / {pad(totalRounds)}</Text>
+            </Text>
+            <Text style={[styles.levelName, { color: difficulty.color }]}>{difficulty.label}</Text>
+          </View>
+          <View style={styles.scoreBox}>
+            {!party && (
+              <>
+                <Text style={styles.scoreNum}>{score}</Text>
+                <Text style={styles.scoreUnit}>pts</Text>
+              </>
             )}
           </View>
-          {phase === 'loading' && <Muted>Chargement du morceau…</Muted>}
-          {phase === 'loading' && slow && (
-            <Button
-              label="⏭ Ce morceau ne charge pas, passer"
-              small
-              variant="secondary"
-              onPress={() => {
-                setSkipped((n) => n + 1);
-                nextTrack();
-              }}
-            />
-          )}
-          {phase === 'countdown' && <Muted>Prépare-toi…</Muted>}
-          {phase === 'ready' && (
-            <Muted>
-              {difficulty.snippet === 1 ? 'Une seule seconde… concentre-toi !' : `Extrait de ${difficulty.snippet} s`}
-            </Muted>
-          )}
-          {listening && (
-            <Text style={styles.listening}>{stalled ? 'Appuie sur ▶ pour lancer le son' : '🎶 Écoute…'}</Text>
-          )}
-          {!party && deadline != null && (
-            <Text style={[styles.seconds, timeLeft < 5 && { color: colors.danger }]}>⏱ {Math.ceil(timeLeft)} s</Text>
-          )}
-          {phase === 'answering' && (
-            <Button
-              label={canReplay ? `🔁 Réécouter (${difficulty.replays - replaysUsed})` : 'Plus de réécoute'}
-              variant="secondary"
-              small
-              disabled={!canReplay}
-              onPress={listen}
-            />
-          )}
-        </Card>
-      ) : (
-        track && (
-          <Card style={styles.stage}>
-            <Image source={thumbnailUrl(track.id)} style={styles.cover} contentFit="cover" />
-            <Text style={styles.revealTitle}>{track.title}</Text>
-            <Text style={styles.revealArtist}>{track.artist}</Text>
-            {!party && lastResult && (
-              <Pop>
-                <Text
-                  style={[
-                    styles.verdict,
-                    {
-                      color: lastResult.correct ? colors.success : colors.danger,
-                    },
-                  ]}>
-                  {lastResult.correct
-                    ? `✅ Bravo ! +${lastResult.points} pts${streak > 1 ? `  🔥 x${streak}` : ''}`
-                    : lastResult.answer
-                      ? '❌ Raté !'
-                      : '⏱️ Temps écoulé'}
-                </Text>
-              </Pop>
-            )}
-          </Card>
-        )
-      )}
-
-      {/* Zone de réponse */}
-      {!party && answerMode === 'qcm' && (phase === 'listening' || phase === 'answering' || phase === 'reveal') && (
-        <View style={styles.choices}>
-          {choices.map((c, i) => {
-            const isRight = track && c === trackLabel(track, target);
-            const revealed = phase === 'reveal';
-            return (
-              <Pressable
-                key={c}
-                onPress={() => pick(c)}
-                disabled={revealed}
-                style={({ pressed }) => [
-                  styles.choice,
-                  pressed && styles.pressed,
-                  revealed && isRight && styles.choiceRight,
-                  revealed && picked === c && !isRight && styles.choiceWrong,
-                ]}>
-                <Text
-                  style={[
-                    styles.letter,
-                    { backgroundColor: revealed && isRight ? colors.success : CHOICE_COLORS[i % CHOICE_COLORS.length] },
-                  ]}>
-                  {String.fromCharCode(65 + i)}
-                </Text>
-                <Text style={styles.choiceText}>{c}</Text>
-              </Pressable>
-            );
-          })}
         </View>
-      )}
+        <RoundTrack total={totalRounds} results={results.map((r) => r.correct)} current={results.length} />
 
-      {!party && answerMode === 'texte' && (phase === 'listening' || phase === 'answering') && (
-        <Card>
-          <Label>
-            {target === 'artiste' ? 'Quel artiste ?' : target === 'titre' ? 'Quel titre ?' : 'Titre ou artiste ?'}
-          </Label>
-          <Input
-            value={typed}
-            onChangeText={(v) => {
-              setTyped(v);
-              setWrongTry(false);
-            }}
-            placeholder="Ta réponse…"
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="send"
-            onSubmitEditing={submitTyped}
-          />
-          {wrongTry && <Text style={styles.wrong}>Non… essaie encore !</Text>}
-          <Row>
-            <Button label="Valider" small onPress={submitTyped} style={styles.flex} />
-            <Button label="Je passe" small variant="ghost" onPress={() => finishRound(false, typed || '—')} />
-          </Row>
-        </Card>
-      )}
-
-      {party && (phase === 'listening' || phase === 'answering') && (
-        <Button label="👀 Révéler la réponse" color={colors.secondary} onPress={revealParty} />
-      )}
-      {party && phase === 'reveal' && (
-        <Card>
-          <Label>Qui a trouvé ?</Label>
-          <Row>
-            {players.map((p) => (
-              <Chip
-                key={p}
-                label={p}
-                color={colors.success}
-                selected={winners.includes(p)}
-                onPress={() => setWinners((w) => (w.includes(p) ? w.filter((x) => x !== p) : [...w, p]))}
+        {!revealed ? (
+          <View style={styles.stage}>
+            <TimerRing
+              progress={timed ? timeLeft / difficulty.answerTime : 1}
+              color={timed ? ringColor : colors.border}>
+              {phase === 'loading' && <ActivityIndicator color={colors.text} size="large" />}
+              {phase === 'countdown' && (
+                <Pop key={countdown}>
+                  <Text style={styles.countdown}>{countdown}</Text>
+                </Pop>
+              )}
+              {(phase === 'ready' || (listening && stalled)) && (
+                <Pressable
+                  onPress={listening ? startListening : listen}
+                  accessibilityLabel="Écouter"
+                  style={({ pressed }) => [styles.play, pressed && styles.pressed]}>
+                  <Icon name="play" size={40} color={colors.onAccent} />
+                </Pressable>
+              )}
+              {listening && !stalled && <SoundBars active={deadline != null} color={difficulty.color} />}
+              {phase === 'answering' &&
+                (party ? (
+                  <Text style={styles.bigQuestion}>?</Text>
+                ) : (
+                  <View style={styles.center}>
+                    <Text style={[styles.seconds, { color: ringColor }]}>{Math.ceil(timeLeft)}</Text>
+                    <Text style={styles.secondsUnit}>secondes</Text>
+                  </View>
+                ))}
+            </TimerRing>
+            <Text style={styles.caption}>{caption}</Text>
+            {phase === 'answering' && difficulty.replays > 0 && (
+              <Button
+                label={canReplay ? `Réécouter · ${difficulty.replays - replaysUsed}` : 'Plus de réécoute'}
+                icon="rotate-ccw"
+                variant="secondary"
+                small
+                disabled={!canReplay}
+                onPress={listen}
               />
-            ))}
-          </Row>
-          <Button label="Manche suivante ➜" onPress={confirmParty} />
-        </Card>
-      )}
-      {party && renderPartyScores()}
+            )}
+            {phase === 'loading' && slow && (
+              <Button
+                label="Ce morceau ne charge pas, passer"
+                icon="skip-forward"
+                small
+                variant="secondary"
+                onPress={() => {
+                  setSkipped((n) => n + 1);
+                  nextTrack();
+                }}
+              />
+            )}
+          </View>
+        ) : (
+          track && (
+            <Pop key={round} style={styles.reveal}>
+              <Image source={thumbnailUrl(track.id)} style={styles.cover} contentFit="cover" />
+              <View style={styles.revealBody}>
+                {!party && lastResult && (
+                  <View style={styles.verdictRow}>
+                    <Text style={[styles.verdict, { color: lastResult.correct ? colors.success : colors.danger }]}>
+                      {lastResult.correct ? `+${lastResult.points}` : lastResult.answer ? 'Raté' : 'Temps écoulé'}
+                    </Text>
+                    {lastResult.correct && streak > 1 && <Text style={styles.streak}>Série ×{streak}</Text>}
+                  </View>
+                )}
+                <Text style={styles.revealTitle} numberOfLines={2}>
+                  {track.title}
+                </Text>
+                <Text style={styles.revealArtist} numberOfLines={1}>
+                  {track.artist}
+                </Text>
+              </View>
+            </Pop>
+          )
+        )}
 
-      {!party && phase === 'reveal' && (
-        <Button
-          label={results.length >= totalRounds ? '🏁 Voir les résultats' : 'Morceau suivant ➜'}
-          onPress={() => nextTrack()}
-        />
-      )}
+        {!party && answerMode === 'qcm' && (listening || phase === 'answering' || revealed) && (
+          <View style={styles.choices}>
+            {choices.map((c, i) => {
+              const isRight = !!track && c === trackLabel(track, target);
+              const isPicked = picked === c;
+              return (
+                <Pressable
+                  key={c}
+                  onPress={() => pick(c)}
+                  disabled={revealed}
+                  style={({ pressed }) => [
+                    styles.choice,
+                    pressed && styles.choicePressed,
+                    revealed && isRight && styles.choiceRight,
+                    revealed && isPicked && !isRight && styles.choiceWrong,
+                    revealed && !isRight && !isPicked && styles.choiceDim,
+                  ]}>
+                  <Text style={styles.choiceKey}>{i + 1}</Text>
+                  <Text style={styles.choiceText} numberOfLines={2}>
+                    {c}
+                  </Text>
+                  {revealed && isRight && <Icon name="check" color={colors.success} />}
+                  {revealed && isPicked && !isRight && <Icon name="x" color={colors.danger} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
-      <Button label="Quitter la partie" variant="ghost" small onPress={() => router.back()} />
-    </Screen>
+        {!party && answerMode === 'texte' && (listening || phase === 'answering') && (
+          <View style={styles.answerBox}>
+            <View style={styles.answerRow}>
+              <Input
+                value={typed}
+                onChangeText={(v) => {
+                  setTyped(v);
+                  setWrongTry(false);
+                }}
+                placeholder="Ta réponse"
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="send"
+                onSubmitEditing={submitTyped}
+                style={[styles.answerInput, wrongTry && styles.answerWrong]}
+              />
+              <Pressable onPress={submitTyped} style={styles.send} accessibilityLabel="Valider">
+                <Icon name="arrow-right" size={22} color={colors.onAccent} />
+              </Pressable>
+            </View>
+            {wrongTry && <Text style={styles.wrong}>Pas ça. Essaie encore.</Text>}
+            <Button label="Je passe" variant="ghost" small onPress={() => finishRound(false, typed || '—')} />
+          </View>
+        )}
+
+        {party && (listening || phase === 'answering') && (
+          <Button label="Révéler la réponse" icon="eye" onPress={revealParty} />
+        )}
+        {party && revealed && (
+          <Card>
+            <Label>Qui a trouvé ?</Label>
+            <Row>
+              {players.map((p) => (
+                <Chip
+                  key={p}
+                  label={p}
+                  color={colors.success}
+                  selected={winners.includes(p)}
+                  onPress={() => setWinners((w) => (w.includes(p) ? w.filter((x) => x !== p) : [...w, p]))}
+                />
+              ))}
+            </Row>
+            <Button label="Manche suivante" icon="arrow-right" onPress={confirmParty} />
+          </Card>
+        )}
+        {party && renderPartyScores()}
+
+        {!party && revealed && (
+          <Button
+            label={results.length >= totalRounds ? 'Voir les résultats' : 'Morceau suivant'}
+            icon="arrow-right"
+            onPress={() => nextTrack()}
+          />
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 
   function renderPartyScores() {
     const ranking = partyRanking();
     return (
-      <Card>
-        <Label>📊 Scores</Label>
-        {ranking.map(([name, n]) => (
-          <Row key={name} style={styles.spread}>
-            <Text style={styles.playerName}>{name}</Text>
-            <Text style={styles.scoreText}>{n}</Text>
-          </Row>
+      <Card style={styles.listCard}>
+        {ranking.map(([name, n], i) => (
+          <View key={name} style={[styles.partyRow, i > 0 && styles.rowBorder]}>
+            <Text style={styles.partyRank}>{i + 1}</Text>
+            <Txt variant="strong" style={styles.flex}>
+              {name}
+            </Txt>
+            <Text style={styles.partyScore}>{n}</Text>
+          </View>
         ))}
       </Card>
     );
@@ -542,191 +540,251 @@ export default function Game() {
 
   function renderSummary() {
     const ranking = partyRanking();
+    let bestStreak = 0;
+    let run = 0;
+    for (const r of results) {
+      run = r.correct ? run + 1 : 0;
+      bestStreak = Math.max(bestStreak, run);
+    }
     return (
-      <Screen>
-        <View style={styles.summaryHero}>
-          <Text style={styles.trophy}>🏆</Text>
-          {party ? (
-            <>
-              <Text style={styles.bigScore}>{ranking[0]?.[0] ?? '—'}</Text>
-              <Muted>
-                gagne avec {ranking[0]?.[1] ?? 0} bonne
-                {(ranking[0]?.[1] ?? 0) > 1 ? 's' : ''} réponse
-                {(ranking[0]?.[1] ?? 0) > 1 ? 's' : ''} !
-              </Muted>
-            </>
-          ) : (
-            <>
-              <Text style={styles.bigScore}>{score} pts</Text>
-              <Muted>
-                {correctCount}/{results.length} bonnes réponses · {difficulty.emoji} {difficulty.label}
-              </Muted>
-              {saved && <Text style={styles.record}>✨ Nouveau record !</Text>}
-              {auth.enabled && (
-                <View style={styles.onlineBox}>
-                  {auth.session ? (
-                    <Muted>
-                      {online === 'sending'
-                        ? '🌍 Envoi au classement mondial…'
-                        : online === 'sent'
-                          ? '🌍 Score enregistré au classement mondial'
-                          : online === 'error'
-                            ? '⚠️ Impossible d’envoyer le score (connexion ?)'
-                            : ''}
-                    </Muted>
-                  ) : (
-                    <Muted>Connecte-toi pour entrer dans le classement mondial.</Muted>
-                  )}
-                  <Row style={styles.center}>
-                    <Button
-                      label="🌍 Classement"
-                      small
-                      variant="secondary"
-                      onPress={() => router.push('/leaderboard')}
-                    />
-                    {!auth.session && <Button label="Se connecter" small onPress={() => router.push('/account')} />}
-                  </Row>
-                </View>
-              )}
-            </>
-          )}
-          {skipped > 0 && <Muted>{skipped} morceau(x) illisible(s) sauté(s)</Muted>}
-        </View>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.topBar}>
+            <IconButton icon="x" label="Accueil" onPress={() => router.dismissTo('/')} />
+          </View>
 
-        {party && renderPartyScores()}
-
-        <Card>
-          <Label>Récapitulatif</Label>
-          {results.map((r, i) => (
-            <Row key={`${r.track.id}-${i}`} style={styles.recap}>
-              <Image source={thumbnailUrl(r.track.id)} style={styles.recapThumb} contentFit="cover" />
-              <View style={styles.flex}>
-                <Text style={styles.playerName} numberOfLines={1}>
-                  {r.track.title}
+          <View style={styles.summaryHero}>
+            <Label>Partie terminée</Label>
+            {party ? (
+              <>
+                <Text style={styles.winner} numberOfLines={1}>
+                  {ranking[0]?.[0] ?? '—'}
                 </Text>
-                <Muted>
-                  {r.track.artist}
-                  {party && r.winners?.length ? ` · ${r.winners.join(', ')}` : ''}
-                </Muted>
-              </View>
-              <Text>{r.correct ? '✅' : '❌'}</Text>
-              {!party && <Text style={styles.recapPoints}>{r.points}</Text>}
-            </Row>
-          ))}
-          {results.length === 0 && <Muted>Aucune manche jouée.</Muted>}
-        </Card>
+                <Txt variant="muted">
+                  gagne avec {ranking[0]?.[1] ?? 0} bonne{(ranking[0]?.[1] ?? 0) > 1 ? 's' : ''} réponse
+                  {(ranking[0]?.[1] ?? 0) > 1 ? 's' : ''}
+                </Txt>
+              </>
+            ) : (
+              <>
+                <Text style={styles.finalScore}>{score}</Text>
+                <Text style={styles.finalUnit}>points</Text>
+                {saved && <Text style={styles.record}>Nouveau record</Text>}
+              </>
+            )}
+          </View>
 
-        <Button
-          label="🔁 Rejouer"
-          color={difficulty.color}
-          onPress={() =>
-            router.replace({
-              pathname: '/setup',
-              params: { mode: party ? 'soiree' : 'solo' },
-            })
-          }
-        />
-        <Button label="Accueil" variant="ghost" onPress={() => router.dismissTo('/')} />
-      </Screen>
+          {!party && (
+            <View style={styles.stats}>
+              <Stat value={`${correctCount}/${results.length}`} label="trouvés" />
+              <Stat value={String(bestStreak)} label="meilleure série" />
+              <Stat value={difficulty.badge} label={difficulty.label} color={difficulty.color} />
+            </View>
+          )}
+
+          {!party && auth.enabled && (
+            <Card style={styles.onlineCard}>
+              <Icon name="globe" color={colors.muted} />
+              <Txt variant="small" style={styles.flex}>
+                {!auth.session
+                  ? 'Connecte-toi pour entrer dans le classement mondial.'
+                  : online === 'sending'
+                    ? 'Envoi au classement mondial…'
+                    : online === 'sent'
+                      ? 'Score enregistré au classement mondial.'
+                      : online === 'error'
+                        ? 'Impossible d’envoyer le score.'
+                        : ''}
+              </Txt>
+              <Button
+                label={auth.session ? 'Classement' : 'Connexion'}
+                small
+                variant="secondary"
+                onPress={() => router.push(auth.session ? '/leaderboard' : '/account')}
+              />
+            </Card>
+          )}
+
+          {party && renderPartyScores()}
+
+          <Label>Récapitulatif</Label>
+          <Card style={styles.listCard}>
+            {results.map((r, i) => (
+              <View key={`${r.track.id}-${i}`} style={[styles.recap, i > 0 && styles.rowBorder]}>
+                <Image source={thumbnailUrl(r.track.id)} style={styles.recapThumb} contentFit="cover" />
+                <View style={styles.flex}>
+                  <Txt variant="strong" numberOfLines={1}>
+                    {r.track.title}
+                  </Txt>
+                  <Txt variant="small" numberOfLines={1}>
+                    {r.track.artist}
+                    {party && r.winners?.length ? ` · ${r.winners.join(', ')}` : ''}
+                  </Txt>
+                </View>
+                {!party && r.correct ? (
+                  <Text style={styles.recapPoints}>+{r.points}</Text>
+                ) : (
+                  <Icon name={r.correct ? 'check' : 'x'} color={r.correct ? colors.success : colors.faint} />
+                )}
+              </View>
+            ))}
+            {results.length === 0 && <Txt variant="muted">Aucune manche jouée.</Txt>}
+          </Card>
+          {skipped > 0 && <Txt variant="small">{skipped} morceau(x) illisible(s) sauté(s).</Txt>}
+
+          <Button
+            label="Rejouer"
+            icon="rotate-ccw"
+            onPress={() => router.replace({ pathname: '/setup', params: { mode: party ? 'soiree' : 'solo' } })}
+          />
+          <Button label="Accueil" variant="secondary" onPress={() => router.dismissTo('/')} />
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 }
 
+function pad(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+function Stat({ value, label, color = colors.text }: { value: string; label: string; color?: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <Txt variant="small" numberOfLines={1}>
+        {label}
+      </Txt>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  header: { justifyContent: 'space-between' },
-  roundText: { color: colors.text, fontWeight: '800', fontSize: 16 },
-  badge: { fontWeight: '800' },
-  scoreText: { color: colors.warning, fontWeight: '900', fontSize: 18 },
-  timerTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceAlt,
-    overflow: 'hidden',
+  safe: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: 20, gap: 18, width: '100%', maxWidth: 560, alignSelf: 'center' },
+  flex: { flex: 1, gap: 2 },
+  center: { alignItems: 'center' },
+  pressed: { opacity: 0.8, transform: [{ scale: 0.97 }] },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  topCenter: { alignItems: 'center' },
+  roundNum: { fontFamily: fonts.display, color: colors.text, fontSize: 24 },
+  roundTotal: { color: colors.faint },
+  levelName: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase' },
+  scoreBox: { width: 72, alignItems: 'flex-end' },
+  scoreNum: { fontFamily: fonts.display, color: colors.accent, fontSize: 24 },
+  scoreUnit: {
+    fontFamily: fonts.bold,
+    color: colors.faint,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
-  timerBar: { height: '100%', borderRadius: 4 },
-  stage: { alignItems: 'center', paddingVertical: 24, gap: 16 },
-  vinylBox: { width: 190, height: 190, alignItems: 'center', justifyContent: 'center' },
-  overlay: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  countdown: {
-    color: '#fff',
-    fontSize: 84,
-    fontWeight: '900',
-    textShadowRadius: 24,
-    textShadowOffset: { width: 0, height: 0 },
-  },
-  seconds: { color: colors.muted, fontWeight: '800', fontSize: 15 },
-  playButton: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+  stage: { alignItems: 'center', gap: 14, paddingVertical: 8 },
+  countdown: { fontFamily: fonts.display, color: colors.text, fontSize: 120, lineHeight: 130 },
+  play: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 0 30px rgba(0,0,0,0.6)',
+    paddingLeft: 6,
   },
-  playIcon: { color: '#0B0B1A', fontSize: 40, marginLeft: 6 },
-  listening: { color: colors.text, fontSize: 18, fontWeight: '800' },
-  cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: 14 },
-  revealTitle: {
-    color: colors.text,
-    fontSize: 24,
-    fontWeight: '900',
-    textAlign: 'center',
+  seconds: { fontFamily: fonts.display, fontSize: 88, lineHeight: 96 },
+  secondsUnit: {
+    fontFamily: fonts.bold,
+    color: colors.faint,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
   },
-  revealArtist: {
-    color: colors.muted,
-    fontSize: 17,
-    fontWeight: '700',
-    textAlign: 'center',
+  bigQuestion: { fontFamily: fonts.display, color: colors.text, fontSize: 110 },
+  caption: { fontFamily: fonts.medium, color: colors.muted, fontSize: 16, textAlign: 'center' },
+  reveal: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  verdict: { fontSize: 18, fontWeight: '900' },
+  cover: { width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.surfaceAlt },
+  revealBody: { padding: 18, gap: 4 },
+  verdictRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, marginBottom: 4 },
+  verdict: { fontFamily: fonts.display, fontSize: 40, lineHeight: 46, textTransform: 'uppercase' },
+  streak: { fontFamily: fonts.bold, color: colors.accent, fontSize: 14 },
+  revealTitle: { fontFamily: fonts.bold, color: colors.text, fontSize: 24, letterSpacing: -0.4 },
+  revealArtist: { fontFamily: fonts.medium, color: colors.muted, fontSize: 16 },
   choices: { gap: 10 },
   choice: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+    minHeight: 60,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
     backgroundColor: colors.surface,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
-    padding: 12,
   },
-  letter: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    textAlign: 'center',
-    lineHeight: 34,
-    color: '#090914',
-    fontWeight: '900',
-    fontSize: 16,
+  choicePressed: { backgroundColor: colors.surfaceAlt },
+  choiceRight: { borderColor: colors.success, backgroundColor: `${colors.success}1F` },
+  choiceWrong: { borderColor: colors.danger, backgroundColor: `${colors.danger}1F` },
+  choiceDim: { opacity: 0.4 },
+  choiceKey: { fontFamily: fonts.display, color: colors.faint, fontSize: 18, width: 16 },
+  choiceText: { flex: 1, fontFamily: fonts.bold, color: colors.text, fontSize: 16 },
+  answerBox: { gap: 8 },
+  answerRow: { flexDirection: 'row', gap: 10 },
+  answerInput: { flex: 1, fontSize: 18, paddingVertical: 15 },
+  answerWrong: { borderColor: colors.danger },
+  send: {
+    width: 56,
+    borderRadius: 12,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wrong: { fontFamily: fonts.medium, color: colors.danger, fontSize: 14 },
+  listCard: { padding: 0, gap: 0, overflow: 'hidden' },
+  rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  partyRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 12 },
+  partyRank: { fontFamily: fonts.display, color: colors.faint, fontSize: 18, width: 16 },
+  partyScore: { fontFamily: fonts.display, color: colors.accent, fontSize: 22 },
+  summaryHero: { alignItems: 'center', gap: 4, paddingVertical: 12 },
+  finalScore: { fontFamily: fonts.display, color: colors.text, fontSize: 104, lineHeight: 112 },
+  finalUnit: {
+    fontFamily: fonts.bold,
+    color: colors.faint,
+    fontSize: 12,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+  },
+  winner: { fontFamily: fonts.display, color: colors.text, fontSize: 64, lineHeight: 72, textTransform: 'uppercase' },
+  record: {
+    marginTop: 10,
+    fontFamily: fonts.bold,
+    color: colors.onAccent,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
     overflow: 'hidden',
+    fontSize: 13,
   },
-  pressed: { opacity: 0.7 },
-  choiceRight: {
-    borderColor: colors.success,
-    backgroundColor: `${colors.success}33`,
+  stats: { flexDirection: 'row', gap: 10 },
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  choiceWrong: {
-    borderColor: colors.danger,
-    backgroundColor: `${colors.danger}33`,
-  },
-  choiceText: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '700' },
-  wrong: { color: colors.danger, fontWeight: '700' },
-  flex: { flex: 1 },
-  spread: { justifyContent: 'space-between' },
-  playerName: { color: colors.text, fontWeight: '700', fontSize: 15 },
-  summaryHero: { alignItems: 'center', gap: 6, paddingVertical: 20 },
-  trophy: { fontSize: 64 },
-  bigScore: { color: colors.text, fontSize: 40, fontWeight: '900' },
-  onlineBox: { alignItems: 'center', gap: 8, marginTop: 6 },
-  center: { justifyContent: 'center' },
-  record: { color: colors.warning, fontWeight: '900', fontSize: 18 },
-  recap: { flexWrap: 'nowrap' },
-  recapThumb: { width: 56, height: 32, borderRadius: 6 },
-  recapPoints: {
-    color: colors.warning,
-    fontWeight: '800',
-    width: 44,
-    textAlign: 'right',
-  },
+  statValue: { fontFamily: fonts.display, fontSize: 28 },
+  onlineCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  recap: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10 },
+  recapThumb: { width: 56, height: 40, borderRadius: 8, backgroundColor: colors.surfaceAlt },
+  recapPoints: { fontFamily: fonts.display, color: colors.accent, fontSize: 18 },
 });

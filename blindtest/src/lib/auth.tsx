@@ -5,7 +5,7 @@ import { ONLINE_ENABLED } from './config';
 import { getSupabase } from './supabase';
 import { WEB_APP_URL } from './theme';
 
-export type Profile = { id: string; username: string; avatar: string; created_at: string };
+export type Profile = { id: string; username: string; avatar: string; created_at: string; is_admin?: boolean };
 
 type Auth = {
   enabled: boolean;

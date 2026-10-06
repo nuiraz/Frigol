@@ -2,10 +2,38 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/components/ui';
+import { Button, Card, Chip, Icon, Input, Label, Muted, Row, Screen } from '@/components/ui';
+import { useSyncStatus } from '@/components/catalog-sync';
 import { adminSession } from '@/lib/admin-session';
+import { useAuth } from '@/lib/auth';
 import { useStore } from '@/lib/store';
-import { CATEGORY_COLORS, colors } from '@/lib/theme';
+import { CATEGORY_COLORS, colors, fonts } from '@/lib/theme';
+
+function SyncCard() {
+  const auth = useAuth();
+  const status = useSyncStatus();
+  if (!auth.enabled) return null;
+  const admin = !!auth.profile?.is_admin;
+  const line = !auth.session
+    ? 'Connecte-toi avec ton compte administrateur : tes catégories seront envoyées sur tous les appareils.'
+    : !admin
+      ? `Le compte « ${auth.profile?.username ?? ''} » n’est pas administrateur. Dans Supabase → SQL Editor, exécute : update profiles set is_admin = true where username = '${auth.profile?.username ?? 'TonPseudo'}';`
+      : status === 'saving'
+        ? 'Envoi des modifications…'
+        : status === 'error'
+          ? 'Échec de la synchronisation. Vérifie ta connexion.'
+          : status === 'loading'
+            ? 'Récupération du catalogue…'
+            : 'Synchronisé : tous les joueurs reçoivent ces catégories, sur mobile comme sur PC.';
+  const color = admin && status !== 'error' ? colors.success : status === 'error' ? colors.danger : colors.muted;
+  return (
+    <Card style={styles.sync}>
+      <Icon name={admin ? (status === 'error' ? 'cloud-off' : 'cloud') : 'upload-cloud'} color={color} />
+      <Muted style={styles.syncText}>{line}</Muted>
+      {!auth.session && <Button label="Connexion" small variant="secondary" onPress={() => router.push('/account')} />}
+    </Card>
+  );
+}
 
 const EMOJIS = ['🎵', '🎸', '🎤', '📼', '💿', '🎹', '🥁', '🎻', '🎷', '🪩', '🎬', '📺', '🧸', '🇫🇷', '🔥', '❤️'];
 
@@ -33,7 +61,7 @@ export default function AdminHome() {
     return (
       <Screen>
         <Card style={styles.pinCard}>
-          <Text style={styles.lock}>🔒</Text>
+          <Icon name="lock" size={32} color={colors.muted} />
           <Label>Code administrateur</Label>
           <Input
             value={pin}
@@ -65,9 +93,14 @@ export default function AdminHome() {
 
   return (
     <Screen>
-      <Button label="📥  Importer une playlist YouTube Music" onPress={() => router.push('/admin/import')} />
+      <SyncCard />
+      <Button
+        label="Importer une playlist YouTube Music"
+        icon="download"
+        onPress={() => router.push('/admin/import')}
+      />
       <Card>
-        <Label>➕ Nouvelle catégorie (vide)</Label>
+        <Label>Nouvelle catégorie (vide)</Label>
         <Input value={name} onChangeText={setName} placeholder="ex : Rap FR, Années 90, Dessins animés…" />
         <Row>
           {EMOJIS.map((e) => (
@@ -86,7 +119,7 @@ export default function AdminHome() {
         <Button label="Créer la catégorie" color={color} disabled={!name.trim()} onPress={create} />
       </Card>
 
-      <Label>🎼 Catégories ({data.categories.length})</Label>
+      <Label>Catégories ({data.categories.length})</Label>
       {data.categories.map((c) => {
         const blocked = c.tracks.filter((t) => t.blocked).length;
         const disabled = c.tracks.filter((t) => t.disabled).length;
@@ -106,7 +139,7 @@ export default function AdminHome() {
               <Muted>
                 {c.tracks.length} morceaux · {c.sources.length} playlist
                 {c.sources.length > 1 ? 's' : ''}
-                {blocked ? ` · ⚠️ ${blocked} bloqué${blocked > 1 ? 's' : ''}` : ''}
+                {blocked ? ` · ${blocked} bloqué${blocked > 1 ? 's' : ''}` : ''}
                 {disabled ? ` · ${disabled} désactivé${disabled > 1 ? 's' : ''}` : ''}
               </Muted>
             </View>
@@ -115,11 +148,7 @@ export default function AdminHome() {
         );
       })}
 
-      <Button
-        label="⚙️  Réglages, sauvegarde & code"
-        variant="secondary"
-        onPress={() => router.push('/admin/settings')}
-      />
+      <Button label="Réglages, sauvegarde & code" variant="secondary" onPress={() => router.push('/admin/settings')} />
       <Button
         label="Verrouiller"
         variant="ghost"
@@ -134,10 +163,12 @@ export default function AdminHome() {
 }
 
 const styles = StyleSheet.create({
+  sync: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  syncText: { flex: 1 },
   pinCard: { alignItems: 'center', marginTop: 40 },
   lock: { fontSize: 48 },
   pinInput: { width: 180, textAlign: 'center', fontSize: 24, letterSpacing: 8 },
-  error: { color: colors.danger, fontWeight: '700' },
+  error: { color: colors.danger, fontFamily: fonts.bold },
   full: { alignSelf: 'stretch' },
   swatch: { width: 34, height: 34, borderRadius: 17 },
   swatchOn: { borderWidth: 3, borderColor: colors.text },
@@ -152,7 +183,7 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.7 },
   catEmoji: { fontSize: 30 },
-  catName: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  catName: { color: colors.text, fontSize: 17, fontFamily: fonts.bold },
   chevron: { color: colors.muted, fontSize: 28 },
   flex: { flex: 1 },
 });

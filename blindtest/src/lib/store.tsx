@@ -23,6 +23,8 @@ type Store = {
   updateSettings: (patch: Partial<Settings>) => void;
   submitScore: (key: string, score: BestScore) => boolean;
   replaceAll: (data: AppData) => void;
+  /** Fusionne le catalogue en ligne : il remplace les catégories du même identifiant, les autres sont gardées. */
+  mergeCatalog: (remote: Category[]) => void;
   resetToDemo: () => void;
 };
 
@@ -165,6 +167,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return true;
       },
       replaceAll: (next) => setData(next),
+      mergeCatalog: (remote) =>
+        setData((d) => {
+          const ids = new Set(remote.map((c) => c.id));
+          // Les catégories de démo disparaissent dès qu'un vrai catalogue existe.
+          const local = d.categories.filter((c) => !ids.has(c.id) && !(remote.length && c.id.startsWith('demo-')));
+          return { ...d, categories: [...remote, ...local] };
+        }),
       resetToDemo: () => setData((d) => ({ ...createDefaultData(), settings: d.settings })),
     }),
     [data, loaded, addCategory, addTracks, mapCategory],
