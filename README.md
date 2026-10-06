@@ -29,3 +29,7 @@ La bonne réponse est toujours la première : les choix sont mélangés automati
 ## Lancer en local
 
 Ouvre simplement `index.html` dans ton navigateur — aucune installation nécessaire.
+
+## 🎧 Blind Test (application Expo)
+
+Le dossier [`blindtest/`](blindtest/) contient une application mobile de blind test (Expo / React Native) alimentée par des playlists YouTube Music, avec page d’administration. Voir [blindtest/README.md](blindtest/README.md).

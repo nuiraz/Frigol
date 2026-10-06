@@ -1,0 +1,155 @@
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/components/ui';
+import { adminSession } from '@/lib/admin-session';
+import { useStore } from '@/lib/store';
+import { CATEGORY_COLORS, colors } from '@/lib/theme';
+
+const EMOJIS = ['🎵', '🎸', '🎤', '📼', '💿', '🎹', '🥁', '🎻', '🎷', '🪩', '🎬', '📺', '🧸', '🇫🇷', '🔥', '❤️'];
+
+export default function AdminHome() {
+  const { data, addCategory } = useStore();
+  const [unlocked, setUnlocked] = useState(adminSession.isUnlocked());
+  const [pin, setPin] = useState('');
+  const [pinError, setPinError] = useState(false);
+  const [name, setName] = useState('');
+  const [emoji, setEmoji] = useState(EMOJIS[0]);
+  const [color, setColor] = useState(CATEGORY_COLORS[0]);
+
+  if (!unlocked) {
+    const tryUnlock = () => {
+      if (pin === data.settings.adminPin) {
+        adminSession.unlock();
+        setUnlocked(true);
+      } else {
+        setPinError(true);
+        setPin('');
+      }
+    };
+    return (
+      <Screen>
+        <Card style={styles.pinCard}>
+          <Text style={styles.lock}>🔒</Text>
+          <Label>Code administrateur</Label>
+          <Input
+            value={pin}
+            onChangeText={(v) => {
+              setPin(v);
+              setPinError(false);
+            }}
+            placeholder="••••"
+            secureTextEntry
+            keyboardType="number-pad"
+            onSubmitEditing={tryUnlock}
+            style={styles.pinInput}
+            autoFocus
+          />
+          {pinError && <Text style={styles.error}>Code incorrect</Text>}
+          <Button label="Déverrouiller" onPress={tryUnlock} style={styles.full} />
+          <Muted>Code par défaut : 1234 (à changer dans les réglages)</Muted>
+        </Card>
+      </Screen>
+    );
+  }
+
+  const create = () => {
+    if (!name.trim()) return;
+    const id = addCategory({ name: name.trim(), emoji, color });
+    setName('');
+    router.push({ pathname: '/admin/category/[id]', params: { id } });
+  };
+
+  return (
+    <Screen>
+      <Card>
+        <Label>➕ Nouvelle catégorie</Label>
+        <Input value={name} onChangeText={setName} placeholder="ex : Rap FR, Années 90, Dessins animés…" />
+        <Row>
+          {EMOJIS.map((e) => (
+            <Chip key={e} label={e} selected={emoji === e} onPress={() => setEmoji(e)} />
+          ))}
+        </Row>
+        <Row>
+          {CATEGORY_COLORS.map((c) => (
+            <Pressable
+              key={c}
+              onPress={() => setColor(c)}
+              style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchOn]}
+            />
+          ))}
+        </Row>
+        <Button label="Créer la catégorie" color={color} disabled={!name.trim()} onPress={create} />
+      </Card>
+
+      <Label>🎼 Catégories ({data.categories.length})</Label>
+      {data.categories.map((c) => {
+        const blocked = c.tracks.filter((t) => t.blocked).length;
+        const disabled = c.tracks.filter((t) => t.disabled).length;
+        return (
+          <Pressable
+            key={c.id}
+            onPress={() =>
+              router.push({
+                pathname: '/admin/category/[id]',
+                params: { id: c.id },
+              })
+            }
+            style={({ pressed }) => [styles.category, { borderLeftColor: c.color }, pressed && styles.pressed]}>
+            <Text style={styles.catEmoji}>{c.emoji}</Text>
+            <View style={styles.flex}>
+              <Text style={styles.catName}>{c.name}</Text>
+              <Muted>
+                {c.tracks.length} morceaux · {c.sources.length} playlist
+                {c.sources.length > 1 ? 's' : ''}
+                {blocked ? ` · ⚠️ ${blocked} bloqué${blocked > 1 ? 's' : ''}` : ''}
+                {disabled ? ` · ${disabled} désactivé${disabled > 1 ? 's' : ''}` : ''}
+              </Muted>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+        );
+      })}
+
+      <Button
+        label="⚙️  Réglages, sauvegarde & code"
+        variant="secondary"
+        onPress={() => router.push('/admin/settings')}
+      />
+      <Button
+        label="Verrouiller"
+        variant="ghost"
+        small
+        onPress={() => {
+          adminSession.lock();
+          setUnlocked(false);
+        }}
+      />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  pinCard: { alignItems: 'center', marginTop: 40 },
+  lock: { fontSize: 48 },
+  pinInput: { width: 180, textAlign: 'center', fontSize: 24, letterSpacing: 8 },
+  error: { color: colors.danger, fontWeight: '700' },
+  full: { alignSelf: 'stretch' },
+  swatch: { width: 34, height: 34, borderRadius: 17 },
+  swatchOn: { borderWidth: 3, borderColor: colors.text },
+  category: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 16,
+    borderLeftWidth: 6,
+  },
+  pressed: { opacity: 0.7 },
+  catEmoji: { fontSize: 30 },
+  catName: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  chevron: { color: colors.muted, fontSize: 28 },
+  flex: { flex: 1 },
+});
