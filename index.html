@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Casse-Tête & Énigmes</title>
+  <meta name="description" content="Jeu en ligne d'énigmes, de logique, de suites et de calcul mental, avec niveaux facile, moyen, difficile et un test de QI.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+
+    <!-- ACCUEIL -->
+    <section id="screen-home" class="screen active">
+      <header class="hero">
+        <div class="logo">🧩</div>
+        <h1>Casse-Tête &amp; Énigmes</h1>
+        <p class="subtitle">Énigmes, logique, suites et calcul mental — à toi de jouer !</p>
+      </header>
+
+      <div class="card">
+        <h2>1. Choisis une catégorie</h2>
+        <div class="options" id="category-options"></div>
+      </div>
+
+      <div class="card">
+        <h2>2. Choisis la difficulté</h2>
+        <div class="options" id="level-options"></div>
+      </div>
+
+      <button class="btn primary big" id="btn-start">▶ Lancer la partie</button>
+
+      <div class="card iq-card">
+        <h2>🧠 Test de QI</h2>
+        <p>20 questions de difficulté croissante, chronométrées. À la fin, tu obtiens une estimation de ton QI (pour le fun, ce n'est pas un test officiel !).</p>
+        <button class="btn accent big" id="btn-iq">Commencer le test de QI</button>
+      </div>
+
+      <div class="card">
+        <h2>🏆 Meilleurs scores</h2>
+        <div id="best-scores"></div>
+      </div>
+    </section>
+
+    <!-- JEU -->
+    <section id="screen-game" class="screen">
+      <div class="topbar">
+        <button class="btn ghost small" id="btn-quit">✕ Quitter</button>
+        <div class="badge" id="game-label"></div>
+        <div class="score">⭐ <span id="score">0</span></div>
+      </div>
+
+      <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="meta">
+        <span id="question-count"></span>
+        <span id="streak"></span>
+        <span class="timer" id="timer"></span>
+      </div>
+      <div class="timer-track"><div class="timer-bar" id="timer-bar"></div></div>
+
+      <div class="card question-card">
+        <div class="q-category" id="q-category"></div>
+        <h2 id="question"></h2>
+        <div class="answers" id="answers"></div>
+        <div class="feedback hidden" id="feedback"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" id="btn-joker">🎲 Joker 50/50</button>
+        <button class="btn primary hidden" id="btn-next">Question suivante →</button>
+      </div>
+    </section>
+
+    <!-- RÉSULTATS -->
+    <section id="screen-result" class="screen">
+      <div class="card result-card">
+        <div class="result-emoji" id="result-emoji"></div>
+        <h1 id="result-title"></h1>
+        <p id="result-text"></p>
+        <div class="stats" id="result-stats"></div>
+        <div class="iq-result hidden" id="iq-result"></div>
+        <div class="actions">
+          <button class="btn primary" id="btn-replay">↻ Rejouer</button>
+          <button class="btn ghost" id="btn-home">⌂ Accueil</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Récapitulatif</h2>
+        <ol class="recap" id="recap"></ol>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>Fait avec ❤️ — Casse-Tête &amp; Énigmes</footer>
+
+  <script src="questions.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
