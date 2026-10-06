@@ -26,7 +26,7 @@ import { colors, fonts } from '@/lib/theme';
 import type { Track } from '@/lib/types';
 import { BLOCKED_ERRORS, thumbnailUrl } from '@/lib/youtube';
 
-type Phase = 'loading' | 'countdown' | 'ready' | 'listening' | 'answering' | 'reveal' | 'finished';
+type Phase = 'loading' | 'ready' | 'listening' | 'answering' | 'reveal' | 'finished';
 
 type RoundResult = {
   track: Track;
@@ -102,7 +102,6 @@ export default function Game() {
   const [streak, setStreak] = useState(0);
   const [skipped, setSkipped] = useState(0);
   const [saved, setSaved] = useState<boolean | null>(null);
-  const [countdown, setCountdown] = useState(3);
   const [stalled, setStalled] = useState(false);
   const [slow, setSlow] = useState(false);
 
@@ -123,17 +122,6 @@ export default function Game() {
     if (phase !== 'loading' || !track) return;
     player.current?.prepare(track.id, track.start != null ? 'fixed' : startMode, track.start);
   }, [track, phase, startMode]);
-
-  // Compte à rebours 3, 2, 1 avant le lancement automatique.
-  useEffect(() => {
-    if (phase !== 'countdown') return;
-    const id = setTimeout(() => {
-      if (countdown <= 1) startListening();
-      else setCountdown(countdown - 1);
-    }, 750);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, countdown]);
 
   // Chargement anormalement long : on propose de passer au morceau suivant.
   useEffect(() => {
@@ -172,17 +160,20 @@ export default function Game() {
   function onPlayerEvent(e: PlayerEvent) {
     if (e.type === 'prepared' && phase === 'loading') {
       setStart(e.start);
-      setCountdown(3);
-      setPhase(autoStart ? 'countdown' : 'ready');
+      if (autoStart) {
+        // Lancement automatique : le son démarre dès que le morceau est prêt.
+        setStalled(false);
+        setPhase('listening');
+        player.current?.segment(difficulty.snippet, e.start);
+      } else {
+        setPhase('ready');
+      }
     } else if (e.type === 'segmentStart' && phase === 'listening' && deadline == null) {
       setStalled(false);
       setDeadline(Date.now() + difficulty.answerTime * 1000);
     } else if (e.type === 'segmentEnd' && phase === 'listening') {
       setPhase('answering');
-    } else if (
-      e.type === 'error' &&
-      (phase === 'loading' || phase === 'countdown' || phase === 'ready' || phase === 'listening')
-    ) {
+    } else if (e.type === 'error' && (phase === 'loading' || phase === 'ready' || phase === 'listening')) {
       // Morceau illisible : on le saute sans compter la manche.
       if (track && typeof e.code === 'number' && BLOCKED_ERRORS.includes(e.code)) store.markBlocked(track.id);
       setSkipped((n) => n + 1);
@@ -197,7 +188,7 @@ export default function Game() {
   }
 
   function listen() {
-    if (phase === 'ready' || phase === 'countdown') {
+    if (phase === 'ready') {
       startListening();
     } else if (phase === 'answering' && replaysUsed < difficulty.replays) {
       setReplaysUsed((n) => n + 1);
@@ -303,19 +294,17 @@ export default function Game() {
   const caption =
     phase === 'loading'
       ? 'Chargement du morceau'
-      : phase === 'countdown'
-        ? 'Prépare-toi'
-        : phase === 'ready'
-          ? difficulty.snippet === 1
-            ? 'Une seule seconde. Concentre-toi.'
-            : `Extrait de ${difficulty.snippet} secondes`
-          : listening
-            ? stalled
-              ? 'Touche pour lancer le son'
-              : 'Écoute…'
-            : party
-              ? 'Qui a trouvé ?'
-              : question;
+      : phase === 'ready'
+        ? difficulty.snippet === 1
+          ? 'Une seule seconde. Concentre-toi.'
+          : `Extrait de ${difficulty.snippet} secondes`
+        : listening
+          ? stalled
+            ? 'Touche pour lancer le son'
+            : 'Écoute…'
+          : party
+            ? 'Qui a trouvé ?'
+            : question;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -347,11 +336,6 @@ export default function Game() {
               progress={timed ? timeLeft / difficulty.answerTime : 1}
               color={timed ? ringColor : colors.border}>
               {phase === 'loading' && <ActivityIndicator color={colors.text} size="large" />}
-              {phase === 'countdown' && (
-                <Pop key={countdown}>
-                  <Text style={styles.countdown}>{countdown}</Text>
-                </Pop>
-              )}
               {(phase === 'ready' || (listening && stalled)) && (
                 <Pressable
                   onPress={listening ? startListening : listen}
@@ -680,7 +664,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   stage: { alignItems: 'center', gap: 14, paddingVertical: 8 },
-  countdown: { fontFamily: fonts.display, color: colors.text, fontSize: 120, lineHeight: 130 },
   play: {
     width: 108,
     height: 108,

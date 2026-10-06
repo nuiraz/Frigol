@@ -151,7 +151,7 @@ export default function Setup() {
           <Field label="Lancement">
             <Segmented
               options={[
-                { value: 'auto', label: 'Auto (3, 2, 1)' },
+                { value: 'auto', label: 'Automatique' },
                 { value: 'manuel', label: 'Au bouton' },
               ]}
               value={auto ? 'auto' : 'manuel'}

@@ -22,7 +22,7 @@ Scanne le QR code avec **Expo Go** (Android / iOS), ou appuie sur `w` pour la ve
 
 ## Jouer
 
-- **🎲 Lecture aléatoire** (accueil) : un clic, les morceaux défilent au hasard, chacun depuis son **début**, avec un compte à rebours 3-2-1 et lancement automatique.
+- **🎲 Lecture aléatoire** (accueil) : un clic, les morceaux défilent au hasard, chacun depuis son **début**, avec lancement automatique du son.
 - **Partie rapide par catégorie** : même chose, limitée à une catégorie.
 
 - **Solo** : choisis une ou plusieurs catégories, un niveau, ce qu’il faut trouver (titre, artiste ou les deux), le type de réponse (propositions ou à écrire) et le nombre de manches.
@@ -36,7 +36,7 @@ Scanne le QR code avec **Expo Go** (Android / iOS), ou appuie sur `w` pour la ve
 | ⚡ 1 seconde | 1 s | 4 propositions | 3 | 500 |
 | 🎬 Intro | 3 premières s | à écrire | 1 | 350 |
 
-Les morceaux sont toujours joués dans un ordre aléatoire. Départ de l’extrait au choix : **début du morceau** (par défaut) ou **moment aléatoire** (entre 25 % et 65 %). Un départ fixé dans l’admin est prioritaire. Lancement automatique (3, 2, 1…) ou au bouton ▶. Le chrono ne démarre qu’une fois le son réellement lancé. Bonus de rapidité, bonus de série 🔥, pénalité par réécoute. La saisie libre tolère accents et fautes de frappe. Meilleurs scores sauvegardés par catégorie et niveau.
+Les morceaux sont toujours joués dans un ordre aléatoire. Départ de l’extrait au choix : **début du morceau** (par défaut) ou **moment aléatoire** (entre 25 % et 65 %). Un départ fixé dans l’admin est prioritaire. Lancement automatique dès que le morceau est prêt, ou au bouton ▶. Le chrono ne démarre qu’une fois le son réellement lancé. Bonus de rapidité, bonus de série 🔥, pénalité par réécoute. La saisie libre tolère accents et fautes de frappe. Meilleurs scores sauvegardés par catégorie et niveau.
 
 ## 📥 Importer une playlist YouTube Music
 
