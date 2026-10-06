@@ -126,8 +126,20 @@ export function Label({ children, style }: { children: ReactNode; style?: StyleP
   return <Text style={[styles.label, style]}>{children}</Text>;
 }
 
-export function Muted({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[styles.muted, style]}>{children}</Text>;
+export function Muted({
+  children,
+  style,
+  numberOfLines,
+}: {
+  children: ReactNode;
+  style?: StyleProp<TextStyle>;
+  numberOfLines?: number;
+}) {
+  return (
+    <Text style={[styles.muted, style]} numberOfLines={numberOfLines}>
+      {children}
+    </Text>
+  );
 }
 
 export function Input(props: TextInputProps) {

@@ -7,6 +7,8 @@ import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/componen
 import { YouTubePlayer } from '@/components/youtube-player';
 import type { PlayerEvent, PlayerHandle } from '@/components/youtube-player.types';
 import { useAdminGuard } from '@/lib/admin-session';
+import { useAuth } from '@/lib/auth';
+import { sharePlaylist } from '@/lib/online';
 import { confirmAction, notify } from '@/lib/dialogs';
 import { useStore } from '@/lib/store';
 import { CATEGORY_COLORS, colors } from '@/lib/theme';
@@ -36,6 +38,9 @@ export default function CategoryEditor() {
   const [search, setSearch] = useState('');
   const [limit, setLimit] = useState(PAGE);
   const [editing, setEditing] = useState<string | null>(null);
+  const auth = useAuth();
+  const [shareText, setShareText] = useState('');
+  const [sharing, setSharing] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -132,6 +137,28 @@ export default function CategoryEditor() {
       store.updateCategory(category!.id, {
         sources: category!.sources.filter((s) => s.listId !== listId),
       });
+  }
+
+  async function shareToHub() {
+    const tracks = category!.tracks.filter((t) => !t.disabled && !t.blocked && t.title);
+    if (tracks.length < 4)
+      return notify('Pas assez de morceaux', 'Il faut au moins 4 morceaux jouables pour partager.');
+    setSharing(true);
+    try {
+      const { id: sharedId } = await sharePlaylist({
+        title: category!.name.slice(0, 60),
+        description: shareText.trim().slice(0, 300),
+        emoji: category!.emoji,
+        color: category!.color,
+        tracks,
+      });
+      setShareText('');
+      router.push({ pathname: '/hub/[id]', params: { id: sharedId } });
+    } catch (e) {
+      notify('Partage impossible', e instanceof Error ? e.message : String(e));
+    } finally {
+      setSharing(false);
+    }
   }
 
   async function removeTrack(track: Track) {
@@ -331,6 +358,31 @@ export default function CategoryEditor() {
         )}
         {category.tracks.length === 0 && <Muted>Aucun morceau. Importe une playlist ci-dessus.</Muted>}
       </Card>
+
+      {auth.enabled && (
+        <Card>
+          <Label>🌍 Partager dans le hub communautaire</Label>
+          <Muted>Les autres joueurs pourront ajouter cette catégorie et y jouer.</Muted>
+          {auth.session ? (
+            <>
+              <Input
+                value={shareText}
+                onChangeText={setShareText}
+                placeholder="Description (optionnelle) : les meilleurs sons de…"
+                multiline
+              />
+              <Button label="Partager" small color={category.color} loading={sharing} onPress={shareToHub} />
+            </>
+          ) : (
+            <Button
+              label="Se connecter pour partager"
+              small
+              variant="secondary"
+              onPress={() => router.push('/account')}
+            />
+          )}
+        </Card>
+      )}
 
       <Button label="🗑️  Supprimer la catégorie" variant="danger" onPress={removeCategory} />
     </Screen>

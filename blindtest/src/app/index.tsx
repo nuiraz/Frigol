@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Backdrop, Card, Label, Muted } from '@/components/ui';
 import { Vinyl } from '@/components/vinyl';
+import { useAuth } from '@/lib/auth';
 import { getDifficulty } from '@/lib/game';
 import { quickPlay } from '@/lib/quick-play';
 import { playableTracks, useStore } from '@/lib/store';
@@ -44,6 +45,7 @@ function Tile({
 
 export default function Home() {
   const { data } = useStore();
+  const auth = useAuth();
   const categories = data.categories.filter((c) => playableTracks(c).length > 0);
   const totalTracks = categories.reduce((n, c) => n + playableTracks(c).length, 0);
   const scores = Object.entries(data.bestScores)
@@ -65,15 +67,17 @@ export default function Home() {
       <Backdrop />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topBar}>
-          <Pressable onPress={() => router.push('/share')} style={styles.iconButton}>
-            <Text style={styles.iconText}>📱 QR code</Text>
+          <Pressable onPress={() => router.push('/account')} style={styles.iconButton}>
+            <Text style={styles.iconText} numberOfLines={1}>
+              {auth.profile ? `${auth.profile.avatar} ${auth.profile.username}` : '👤 Connexion'}
+            </Text>
           </Pressable>
           <View style={styles.topRight}>
             <Pressable onPress={() => router.push('/admin/import')} style={styles.iconButton}>
               <Text style={styles.iconText}>📥 Importer</Text>
             </Pressable>
-            <Pressable onPress={() => router.push('/admin')} style={styles.iconButton}>
-              <Text style={styles.iconText}>🔒 Admin</Text>
+            <Pressable onPress={() => router.push('/share')} style={styles.iconButton}>
+              <Text style={styles.iconText}>📱 QR</Text>
             </Pressable>
           </View>
         </View>
@@ -108,6 +112,23 @@ export default function Home() {
             subtitle="Entre amis"
             color={colors.secondary}
             onPress={() => router.push({ pathname: '/setup', params: { mode: 'soiree' } })}
+          />
+        </View>
+
+        <View style={styles.grid}>
+          <Tile
+            emoji="🌍"
+            title="Classement"
+            subtitle="Mondial"
+            color={colors.warning}
+            onPress={() => router.push('/leaderboard')}
+          />
+          <Tile
+            emoji="👥"
+            title="Hub"
+            subtitle="Playlists de la commu"
+            color={colors.success}
+            onPress={() => router.push('/hub')}
           />
         </View>
 
@@ -156,6 +177,23 @@ export default function Home() {
             })
           )}
         </Card>
+
+        <Pressable onPress={() => router.push('/admin')} style={styles.adminLink}>
+          <Text style={styles.adminText}>🔒 Administration</Text>
+        </Pressable>
+        <View style={styles.footer}>
+          <Text style={styles.footerLink} onPress={() => router.push('/legal/mentions')}>
+            Mentions légales
+          </Text>
+          <Text style={styles.footerDot}>·</Text>
+          <Text style={styles.footerLink} onPress={() => router.push('/legal/cgu')}>
+            CGU
+          </Text>
+          <Text style={styles.footerDot}>·</Text>
+          <Text style={styles.footerLink} onPress={() => router.push('/legal/confidentialite')}>
+            Confidentialité
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -166,9 +204,15 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 14, width: '100%', maxWidth: 720, alignSelf: 'center' },
   topBar: { flexDirection: 'row', justifyContent: 'space-between' },
   topRight: { flexDirection: 'row', gap: 8 },
+  adminLink: { alignSelf: 'center', padding: 8 },
+  adminText: { color: colors.muted, fontWeight: '700' },
+  footer: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 8 },
+  footerLink: { color: colors.muted, fontSize: 12, textDecorationLine: 'underline' },
+  footerDot: { color: colors.muted, fontSize: 12 },
   iconButton: {
     paddingVertical: 8,
     paddingHorizontal: 14,
+    maxWidth: 180,
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,

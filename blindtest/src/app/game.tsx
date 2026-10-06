@@ -18,6 +18,8 @@ import {
   trackLabel,
   type Target,
 } from '@/lib/game';
+import { useAuth } from '@/lib/auth';
+import { submitOnlineScore } from '@/lib/online';
 import { playableTracks, useStore } from '@/lib/store';
 import { colors } from '@/lib/theme';
 import type { Track } from '@/lib/types';
@@ -61,6 +63,8 @@ export default function Game() {
     auto?: string;
   }>();
   const store = useStore();
+  const auth = useAuth();
+  const [online, setOnline] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const difficulty = getDifficulty(params.difficulty);
   const target: Target = params.target ?? 'titre';
   const answerMode = params.answer ?? difficulty.answerMode;
@@ -253,6 +257,18 @@ export default function Game() {
             date: Date.now(),
           }),
         );
+        if (auth.session) {
+          setOnline('sending');
+          submitOnlineScore({
+            score: total,
+            difficulty: difficulty.id,
+            category: categoryLabel(),
+            correct: done.filter((r) => r.correct).length,
+            rounds: done.length,
+          })
+            .then(() => setOnline('sent'))
+            .catch(() => setOnline('error'));
+        }
       }
       setPhase('finished');
       return;
@@ -515,6 +531,15 @@ export default function Game() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }
 
+  function categoryLabel() {
+    if (params.categories === 'all') return 'Toutes catégories';
+    return store.data.categories
+      .filter((c) => params.categories?.split(',').includes(c.id))
+      .map((c) => c.name)
+      .join(', ')
+      .slice(0, 80);
+  }
+
   function renderSummary() {
     const ranking = partyRanking();
     return (
@@ -537,6 +562,32 @@ export default function Game() {
                 {correctCount}/{results.length} bonnes réponses · {difficulty.emoji} {difficulty.label}
               </Muted>
               {saved && <Text style={styles.record}>✨ Nouveau record !</Text>}
+              {auth.enabled && (
+                <View style={styles.onlineBox}>
+                  {auth.session ? (
+                    <Muted>
+                      {online === 'sending'
+                        ? '🌍 Envoi au classement mondial…'
+                        : online === 'sent'
+                          ? '🌍 Score enregistré au classement mondial'
+                          : online === 'error'
+                            ? '⚠️ Impossible d’envoyer le score (connexion ?)'
+                            : ''}
+                    </Muted>
+                  ) : (
+                    <Muted>Connecte-toi pour entrer dans le classement mondial.</Muted>
+                  )}
+                  <Row style={styles.center}>
+                    <Button
+                      label="🌍 Classement"
+                      small
+                      variant="secondary"
+                      onPress={() => router.push('/leaderboard')}
+                    />
+                    {!auth.session && <Button label="Se connecter" small onPress={() => router.push('/account')} />}
+                  </Row>
+                </View>
+              )}
             </>
           )}
           {skipped > 0 && <Muted>{skipped} morceau(x) illisible(s) sauté(s)</Muted>}
@@ -667,6 +718,8 @@ const styles = StyleSheet.create({
   summaryHero: { alignItems: 'center', gap: 6, paddingVertical: 20 },
   trophy: { fontSize: 64 },
   bigScore: { color: colors.text, fontSize: 40, fontWeight: '900' },
+  onlineBox: { alignItems: 'center', gap: 8, marginTop: 6 },
+  center: { justifyContent: 'center' },
   record: { color: colors.warning, fontWeight: '900', fontSize: 18 },
   recap: { flexWrap: 'nowrap' },
   recapThumb: { width: 56, height: 32, borderRadius: 6 },

@@ -60,6 +60,24 @@ Accueil → 🔒 Administration (code par défaut **1234**, à changer dans Rég
 
 Trois catégories de démo (Années 80, Hits Pop, Rock) sont fournies pour tester tout de suite.
 
+## 🌍 Comptes, classement mondial et hub communautaire
+
+Ces fonctions utilisent [Supabase](https://supabase.com) (gratuit). Tant qu’il n’est pas branché, l’app reste jouable hors ligne.
+
+1. Crée un projet sur supabase.com (région Europe conseillée).
+2. **SQL Editor → New query** : colle le contenu de [`supabase/schema.sql`](supabase/schema.sql) puis **Run**.
+3. **Authentication → URL Configuration** : *Site URL* = `https://nuiraz.github.io/jeuxenigme/app/`, et ajoute la même adresse dans *Redirect URLs*.
+4. **Project Settings → API** : copie la *Project URL* et la clé *anon public*, puis crée `blindtest/.env` :
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+   ```
+   (La clé anon est publique par nature ; la sécurité repose sur les règles du fichier SQL.)
+5. `npm run build:web` puis pousse pour mettre à jour le site.
+
+Modération : les signalements arrivent dans la table `reports` (Table Editor) ; supprime une playlist depuis `shared_playlists`.
+Pense à compléter l’éditeur et l’e-mail de contact dans `src/lib/config.ts` (objet `LEGAL`) pour les mentions légales.
+
 ## Mettre à jour la version web
 
 ```bash
