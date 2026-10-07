@@ -11,7 +11,14 @@ Site : https://nuiraz.github.io/Frigol/hub/
    - Site URL : `https://nuiraz.github.io/Frigol/hub/`
    - Redirect URLs : `https://nuiraz.github.io/Frigol/hub/`
 3. **Clé Steam** : en créer une sur https://steamcommunity.com/dev/apikey (domaine : `nuiraz.github.io`).
-4. **Fonction serveur** (Supabase CLI) :
+4. **Fonction serveur** (indispensable : sans elle, « Le serveur ne répond pas »).
+   Sans rien installer, depuis le site Supabase :
+   - *Edge Functions* → *Deploy a new function* → *Via Editor*, nom : **`api`**
+   - effacer le code d'exemple, coller tout le fichier `supabase/functions/api/index.ts`, puis *Deploy*
+   - dans la fonction `api` → *Details* : **désactiver « Verify JWT »**, puis *Save*
+   - *Edge Functions* → *Secrets* : ajouter `STEAM_API_KEY` = ta clé Steam
+
+   Ou avec la ligne de commande :
    ```sh
    cd ludotheque
    npx supabase login
