@@ -13,18 +13,15 @@ function SyncCard() {
   const auth = useAuth();
   const status = useSyncStatus();
   if (!auth.enabled) return null;
-  const admin = !!auth.profile?.is_admin;
   const line = !auth.session
-    ? 'Connecte-toi : tes catégories seront enregistrées en ligne et tu les retrouveras sur tous tes appareils.'
+    ? 'Connecte-toi : tes imports seront partagés avec tous les joueurs, sur tous les appareils. Sinon ils restent sur cet appareil.'
     : status === 'saving'
       ? 'Envoi des modifications…'
       : status === 'error'
-        ? 'Échec de la synchronisation. Vérifie ta connexion.'
+        ? 'Échec de la synchronisation. Vérifie ta connexion (et que le fichier SQL a bien été exécuté).'
         : status === 'loading'
           ? 'Synchronisation…'
-          : admin
-            ? 'Synchronisé : tous les joueurs reçoivent ces catégories, sur mobile comme sur PC.'
-            : 'Synchronisé avec ton compte : tu retrouves ces catégories sur tous tes appareils.';
+          : 'Synchronisé : toutes les musiques importées sont partagées avec tous les comptes, sur mobile comme sur PC.';
   const color = auth.session && status !== 'error' ? colors.success : status === 'error' ? colors.danger : colors.muted;
   return (
     <Card style={styles.sync}>

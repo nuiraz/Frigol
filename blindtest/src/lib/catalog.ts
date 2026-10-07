@@ -9,25 +9,23 @@ type Row = {
   tracks: Category['tracks'];
   sources: Category['sources'];
   position: number;
+  owner_id?: string | null;
 };
 
 function toCategory(r: Row): Category {
-  return { id: r.id, name: r.name, emoji: r.emoji, color: r.color, tracks: r.tracks ?? [], sources: r.sources ?? [] };
-}
-
-function toRow(c: Category, position: number): Row {
   return {
-    id: c.id,
-    name: c.name || 'Sans nom',
-    emoji: c.emoji,
-    color: c.color,
-    tracks: c.tracks,
-    sources: c.sources,
-    position,
+    id: r.id,
+    name: r.name,
+    emoji: r.emoji,
+    color: r.color,
+    tracks: r.tracks ?? [],
+    sources: r.sources ?? [],
+    // Chaîne vide : catégorie publiée sans auteur connu (seul un administrateur peut la modifier).
+    ownerId: r.owner_id ?? '',
   };
 }
 
-/** Catégories publiées par l'administrateur (lisibles par tous, sans compte). */
+/** Catalogue commun : toutes les catégories publiées par les joueurs (lisible sans compte). */
 export async function fetchCatalog(): Promise<Category[] | null> {
   const sb = getSupabase();
   if (!sb) return null;
@@ -36,20 +34,25 @@ export async function fetchCatalog(): Promise<Category[] | null> {
   return (data as Row[]).map(toCategory);
 }
 
-/** Envoie les catégories modifiées et supprime celles retirées (administrateur uniquement). */
-export async function pushCatalog(all: Category[], changed: Category[], removedIds: string[]) {
+/** Publie les catégories modifiées et supprime celles retirées. */
+export async function pushCatalog(all: Category[], changed: Category[], removedIds: string[], userId: string) {
   const sb = getSupabase();
   if (!sb) return;
   if (changed.length) {
-    const rows = changed.map((c) =>
-      toRow(
-        c,
-        all.findIndex((x) => x.id === c.id),
-      ),
-    );
-    const { error } = await sb
-      .from('catalog_categories')
-      .upsert(rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
+    const rows = changed.map((c) => ({
+      id: c.id,
+      name: c.name || 'Sans nom',
+      emoji: c.emoji,
+      color: c.color,
+      // L'état « bloqué » dépend de l'appareil : il n'est pas publié.
+      tracks: c.tracks.map(({ blocked: _blocked, ...t }) => t),
+      sources: c.sources,
+      position: all.findIndex((x) => x.id === c.id),
+      // Une nouvelle catégorie appartient à celui qui la publie ; sinon l'auteur d'origine est conservé.
+      owner_id: c.ownerId === undefined ? userId : c.ownerId || null,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await sb.from('catalog_categories').upsert(rows);
     if (error) throw new Error(error.message);
   }
   if (removedIds.length) {
@@ -58,20 +61,12 @@ export async function pushCatalog(all: Category[], changed: Category[], removedI
   }
 }
 
-/** Catégories personnelles de l'utilisateur connecté (synchronisées entre ses appareils). */
-export async function fetchLibrary(userId: string): Promise<Category[]> {
+/** Ancienne bibliothèque personnelle : récupérée une fois pour être publiée dans le catalogue commun. */
+export async function fetchLegacyLibrary(userId: string): Promise<Category[]> {
   const sb = getSupabase();
   if (!sb) return [];
-  const { data, error } = await sb.from('user_libraries').select('categories').eq('user_id', userId).maybeSingle();
-  if (error) throw new Error(error.message);
-  return ((data?.categories as Category[] | undefined) ?? []).filter((c) => c && c.id);
-}
-
-export async function pushLibrary(userId: string, categories: Category[]) {
-  const sb = getSupabase();
-  if (!sb) return;
-  const { error } = await sb
-    .from('user_libraries')
-    .upsert({ user_id: userId, categories, updated_at: new Date().toISOString() });
-  if (error) throw new Error(error.message);
+  const { data } = await sb.from('user_libraries').select('categories').eq('user_id', userId).maybeSingle();
+  return ((data?.categories as Category[] | undefined) ?? [])
+    .filter((c) => c && c.id)
+    .map(({ ownerId: _ownerId, ...c }) => c);
 }

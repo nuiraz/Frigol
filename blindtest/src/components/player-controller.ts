@@ -14,10 +14,15 @@ var segStartedAt = 0;
 var segWatch = null;
 var watchdog = null;
 var playlistTries = 0;
+var warmPoll = null; // surveille le démarrage réel du morceau (après une éventuelle pub)
+var warmBase = 0;
+var warmSince = 0;
+var adSignaled = false;
 
 function clearTimers() {
   if (segTimer) { clearTimeout(segTimer); segTimer = null; }
   if (segWatch) { clearTimeout(segWatch); segWatch = null; }
+  if (warmPoll) { clearInterval(warmPoll); warmPoll = null; }
   if (watchdog) { clearTimeout(watchdog); watchdog = null; }
 }
 
@@ -58,6 +63,26 @@ function readPlaylist() {
   setTimeout(readPlaylist, 500);
 }
 
+/** Pendant une pub, le temps du morceau n'avance pas : on attend qu'il avance vraiment. */
+function checkWarmup() {
+  if (phase !== 'preparing') { clearInterval(warmPoll); warmPoll = null; return; }
+  var t = 0;
+  try { t = player.getCurrentTime() || 0; } catch (e) {}
+  if (t > warmBase + 0.25) {
+    clearTimers();
+    var duration = player.getDuration();
+    target.start = pickStart(duration);
+    player.pauseVideo();
+    player.seekTo(target.start, true);
+    phase = 'prepared';
+    send({ type: 'prepared', start: target.start, duration: duration });
+    return;
+  }
+  var waited = Date.now() - warmSince;
+  if (!adSignaled && waited > 1500) { adSignaled = true; send({ type: 'ad' }); }
+  if (waited > 60000) { clearTimers(); phase = 'idle'; send({ type: 'error', code: 'timeout' }); }
+}
+
 function markPrepared() {
   clearTimers();
   var duration = 0;
@@ -70,17 +95,13 @@ return {
   onState: function (s) {
     if (s === 5 && phase === 'cueing') { markPrepared(); return; }
     // -1 non démarré, 0 terminé, 1 lecture, 2 pause, 3 chargement, 5 prête
-    if (s === 1 && phase === 'preparing') {
-      clearTimers();
-      var duration = player.getDuration();
-      target.start = pickStart(duration);
-      player.pauseVideo();
-      player.seekTo(target.start, true);
-      phase = 'prepared';
-      send({ type: 'prepared', start: target.start, duration: duration });
+    if (s === 1 && phase === 'preparing' && !warmPoll) {
+      warmSince = Date.now();
+      warmPoll = setInterval(checkWarmup, 200);
     } else if (s === 1 && phase === 'segment' && !segTimer) {
       // Le chrono de l'extrait ne tourne que quand le son sort vraiment : les chargements ne le raccourcissent pas.
       if (segWatch) { clearTimeout(segWatch); segWatch = null; }
+  if (warmPoll) { clearInterval(warmPoll); warmPoll = null; }
       if (segRemaining === null) { segRemaining = target.duration * 1000; send({ type: 'segmentStart' }); }
       runSegmentTimer();
     } else if ((s === 3 || s === 2) && phase === 'segment') {
@@ -100,22 +121,20 @@ return {
     clearTimers();
     target.startMode = startMode;
     target.start = start || 0;
-    if (startMode !== 'random') {
-      // Départ connu : on se contente de « préparer » la vidéo, sans lecture automatique
-      // (bloquée par certains navigateurs).
-      phase = 'cueing';
-      player.cueVideoById({ videoId: videoId, startSeconds: target.start });
-      watchdog = setTimeout(function () { if (phase === 'cueing') markPrepared(); }, 6000);
-      return;
-    }
-    // Départ aléatoire : il faut connaître la durée, on lance donc la vidéo en silencieux.
+    adSignaled = false;
+    // On lance la vidéo en silence : une éventuelle publicité passe pendant le chargement, son coupé,
+    // et on n'annonce le morceau prêt qu'une fois la vraie musique démarrée.
     phase = 'preparing';
+    warmBase = startMode === 'fixed' ? target.start : 0;
     player.mute();
-    player.loadVideoById({ videoId: videoId, startSeconds: 0 });
+    player.loadVideoById({ videoId: videoId, startSeconds: warmBase });
     watchdog = setTimeout(function () {
-      // Lecture auto refusée : on se rabat sur une vidéo simplement préparée.
-      if (phase === 'preparing') { player.cueVideoById({ videoId: videoId, startSeconds: 0 }); markPrepared(); }
-    }, 6000);
+      // Lecture automatique refusée par le navigateur : on se contente de préparer la vidéo.
+      if (phase === 'preparing' && !warmPoll) {
+        player.cueVideoById({ videoId: videoId, startSeconds: warmBase });
+        markPrepared();
+      }
+    }, 8000);
   },
   segment: function (duration, start) {
     clearTimers();

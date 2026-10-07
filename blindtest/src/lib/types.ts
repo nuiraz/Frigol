@@ -25,6 +25,8 @@ export type Category = {
   color: string;
   sources: PlaylistSource[];
   tracks: Track[];
+  /** Auteur de la catégorie dans le catalogue commun (absent tant qu'elle n'est pas publiée). */
+  ownerId?: string;
 };
 
 export type Settings = {

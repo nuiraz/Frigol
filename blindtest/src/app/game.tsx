@@ -104,6 +104,7 @@ export default function Game() {
   const [saved, setSaved] = useState<boolean | null>(null);
   const [stalled, setStalled] = useState(false);
   const [slow, setSlow] = useState(false);
+  const [adPlaying, setAdPlaying] = useState(false);
 
   const track = queue[cursor] as Track | undefined;
   const round = results.length + 1;
@@ -192,6 +193,8 @@ export default function Game() {
     } else if (e.type === 'segmentStart' && phase === 'listening' && deadline == null) {
       setStalled(false);
       setDeadline(Date.now() + difficulty.answerTime * 1000);
+    } else if (e.type === 'ad' && phase === 'loading') {
+      setAdPlaying(true);
     } else if (e.type === 'stalled' && phase === 'listening') {
       setStalled(true);
     } else if (e.type === 'segmentEnd' && phase === 'listening') {
@@ -287,6 +290,7 @@ export default function Game() {
     setPicked(null);
     setWinners([]);
     setStalled(false);
+    setAdPlaying(false);
   }
 
   function revealParty() {
@@ -316,7 +320,9 @@ export default function Game() {
   const question = target === 'artiste' ? 'Quel artiste ?' : target === 'titre' ? 'Quel titre ?' : 'Titre ou artiste ?';
   const caption =
     phase === 'loading'
-      ? 'Chargement du morceau'
+      ? adPlaying
+        ? 'Publicité YouTube en cours, son coupé…'
+        : 'Chargement du morceau'
       : phase === 'ready'
         ? difficulty.snippet === 1
           ? 'Une seule seconde. Concentre-toi.'
@@ -391,7 +397,7 @@ export default function Game() {
             )}
             {((phase === 'loading' && slow) || (listening && stalled)) && (
               <Button
-                label="Ce morceau ne charge pas, passer"
+                label={adPlaying ? 'Passer ce morceau' : 'Ce morceau ne charge pas, passer'}
                 icon="skip-forward"
                 small
                 variant="secondary"

@@ -265,7 +265,7 @@ function ProfileView() {
             ? 'Synchronisation impossible pour le moment.'
             : sync === 'saving' || sync === 'loading'
               ? 'Synchronisation de tes catégories…'
-              : 'Tes catégories sont synchronisées : tu les retrouves sur PC comme sur téléphone.'}
+              : 'Synchronisé : tes imports sont partagés avec tous les joueurs, sur PC comme sur téléphone.'}
         </Muted>
       </Card>
 

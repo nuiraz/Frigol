@@ -1,13 +1,14 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { AppState } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
-import { fetchCatalog, fetchLibrary, pushCatalog, pushLibrary } from '@/lib/catalog';
+import { fetchCatalog, fetchLegacyLibrary, pushCatalog } from '@/lib/catalog';
 import { useStore } from '@/lib/store';
 import type { Category } from '@/lib/types';
 
 export type SyncStatus = 'off' | 'loading' | 'synced' | 'saving' | 'error';
 
-// État partagé de la synchronisation, lu par l'écran d'administration.
+// État partagé de la synchronisation, affiché dans le compte et l'administration.
 let status: SyncStatus = 'off';
 const listeners = new Set<() => void>();
 function setStatus(next: SyncStatus) {
@@ -25,46 +26,71 @@ export function useSyncStatus() {
   );
 }
 
-const fingerprint = (c: Category, i: number) => JSON.stringify([i, c.name, c.emoji, c.color, c.tracks, c.sources]);
+const REFRESH_MS = 90_000;
 
-type Synced = { catalog: Map<string, string>; catalogIds: Set<string>; library: string };
+const fingerprint = (c: Category, i: number) =>
+  JSON.stringify([i, c.name, c.emoji, c.color, c.tracks.map(({ blocked: _b, ...t }) => t), c.sources]);
+
+type Synced = { prints: Map<string, string>; owners: Map<string, string> };
 
 /**
- * Synchronisation des catégories avec la base de données :
- * - le catalogue de l'administrateur est téléchargé par tout le monde ;
- * - les catégories d'un joueur connecté sont sauvegardées dans sa bibliothèque et
- *   retrouvées sur tous ses appareils ;
- * - l'administrateur publie automatiquement ses modifications dans le catalogue.
+ * Catalogue commun : toutes les catégories importées par les joueurs connectés sont publiées
+ * dans la base et reçues par tout le monde, sur tous les appareils. Seul l'auteur (ou un
+ * administrateur) peut modifier ou supprimer sa catégorie.
  */
 export function CatalogSync() {
   const store = useStore();
   const auth = useAuth();
   const synced = useRef<Synced | null>(null);
-  const merge = useRef(store.mergeCatalog);
+  const actions = useRef(store);
   useEffect(() => {
-    merge.current = store.mergeCatalog;
+    actions.current = store;
+  });
+  const [tick, setTick] = useState(0);
+  const latest = useRef(store.data.categories);
+  useEffect(() => {
+    latest.current = store.data.categories;
   });
 
   const userId = auth.session?.user.id;
   const isAdmin = !!auth.profile?.is_admin;
   const ready = store.loaded && auth.ready && auth.enabled;
 
-  // 1. Téléchargement du catalogue et de la bibliothèque personnelle.
+  // Rafraîchit régulièrement et au retour dans l'application, pour recevoir les ajouts des autres.
+  useEffect(() => {
+    if (!ready) return;
+    const id = setInterval(() => setTick((t) => t + 1), REFRESH_MS);
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && setTick((t) => t + 1));
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
+  }, [ready]);
+
+  const canEdit = (c: Category) =>
+    !c.id.startsWith('demo-') && (isAdmin || c.ownerId === undefined || c.ownerId === userId);
+
+  // 1. Téléchargement du catalogue.
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
-    synced.current = null;
-    setStatus('loading');
-    Promise.all([fetchCatalog(), userId ? fetchLibrary(userId) : Promise.resolve([])])
-      .then(([catalog, library]) => {
+    if (!synced.current) setStatus('loading');
+    Promise.all([fetchCatalog(), userId && tick === 0 ? fetchLegacyLibrary(userId) : Promise.resolve([])])
+      .then(([catalog, legacy]) => {
         if (cancelled || !catalog) return;
-        const catalogIds = new Set(catalog.map((c) => c.id));
-        const personal = library.filter((c) => !catalogIds.has(c.id));
-        merge.current([...catalog, ...personal]);
+        // Des modifications locales attendent d'être envoyées : on ne les écrase pas, on réessaiera.
+        const state = synced.current;
+        if (
+          state &&
+          userId &&
+          latest.current.some((c, i) => canEdit(c) && state.prints.get(c.id) !== fingerprint(c, i))
+        )
+          return;
+        const ids = new Set(catalog.map((c) => c.id));
+        actions.current.mergeCatalog([...catalog, ...legacy.filter((c) => !ids.has(c.id))]);
         synced.current = {
-          catalog: new Map(catalog.map((c, i) => [c.id, fingerprint(c, i)])),
-          catalogIds,
-          library: JSON.stringify(personal),
+          prints: new Map(catalog.map((c, i) => [c.id, fingerprint(c, i)])),
+          owners: new Map(catalog.map((c) => [c.id, c.ownerId ?? ''])),
         };
         setStatus('synced');
       })
@@ -72,32 +98,34 @@ export function CatalogSync() {
     return () => {
       cancelled = true;
     };
-  }, [ready, userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, userId, tick]);
 
-  // 2. Envoi des modifications (regroupées toutes les 1,5 s).
+  // 2. Publication des ajouts et modifications (regroupés toutes les 1,5 s).
   const categories = store.data.categories;
   useEffect(() => {
     if (!userId || !synced.current) return;
     const id = setTimeout(async () => {
       const state = synced.current;
       if (!state) return;
+      const changed = categories.filter((c, i) => canEdit(c) && state.prints.get(c.id) !== fingerprint(c, i));
+      const current = new Set(categories.map((c) => c.id));
+      const removed = [...state.owners.entries()]
+        .filter(([cid, owner]) => !current.has(cid) && (isAdmin || owner === userId))
+        .map(([cid]) => cid);
+      if (!changed.length && !removed.length) return;
+      setStatus('saving');
       try {
-        if (isAdmin) {
-          const changed = categories.filter((c, i) => state.catalog.get(c.id) !== fingerprint(c, i));
-          const current = new Set(categories.map((c) => c.id));
-          const removed = [...state.catalog.keys()].filter((k) => !current.has(k));
-          if (!changed.length && !removed.length) return;
-          setStatus('saving');
-          await pushCatalog(categories, changed, removed);
-          state.catalog = new Map(categories.map((c, i) => [c.id, fingerprint(c, i)]));
-          state.catalogIds = current;
-        } else {
-          const personal = categories.filter((c) => !state.catalogIds.has(c.id));
-          const json = JSON.stringify(personal);
-          if (json === state.library) return;
-          setStatus('saving');
-          await pushLibrary(userId, personal);
-          state.library = json;
+        await pushCatalog(categories, changed, removed, userId);
+        categories.forEach((c, i) => state.prints.set(c.id, fingerprint(c, i)));
+        removed.forEach((cid) => {
+          state.prints.delete(cid);
+          state.owners.delete(cid);
+        });
+        for (const c of changed) {
+          const owner = c.ownerId === undefined ? userId : c.ownerId;
+          state.owners.set(c.id, owner);
+          if (c.ownerId === undefined) actions.current.updateCategory(c.id, { ownerId: userId });
         }
         setStatus('synced');
       } catch {
@@ -105,6 +133,7 @@ export function CatalogSync() {
       }
     }, 1500);
     return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, isAdmin, userId]);
 
   return null;

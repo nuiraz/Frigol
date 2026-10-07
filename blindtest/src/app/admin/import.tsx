@@ -3,10 +3,11 @@ import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/components/ui';
+import { Button, Card, Chip, Icon, Input, Label, Muted, Row, Screen } from '@/components/ui';
 import { YouTubePlayer } from '@/components/youtube-player';
 import type { PlayerEvent, PlayerHandle } from '@/components/youtube-player.types';
 import { useAdminGuard } from '@/lib/admin-session';
+import { useAuth } from '@/lib/auth';
 import { notify } from '@/lib/dialogs';
 import { readYouTubeLink, type ImportResult } from '@/lib/importer';
 import { useStore } from '@/lib/store';
@@ -24,6 +25,7 @@ function now() {
 export default function ImportPlaylist() {
   const ok = useAdminGuard('/admin/import');
   const store = useStore();
+  const auth = useAuth();
   const player = useRef<PlayerHandle>(null);
   const resolver = useRef<((ids: string[]) => void) | null>(null);
 
@@ -100,6 +102,17 @@ export default function ImportPlaylist() {
   return (
     <Screen>
       <YouTubePlayer ref={player} onEvent={onPlayerEvent} />
+
+      {auth.enabled && !auth.session && (
+        <Card style={styles.hint}>
+          <Icon name="upload-cloud" color={colors.accent} />
+          <Muted style={styles.flex}>
+            Connecte-toi pour que tes playlists soient envoyées à tous les joueurs. Sans compte, elles restent sur cet
+            appareil.
+          </Muted>
+          <Button label="Connexion" small variant="secondary" onPress={() => router.push('/account')} />
+        </Card>
+      )}
 
       <Card>
         <Label>Colle le lien YouTube Music</Label>
@@ -255,6 +268,7 @@ function CategoryOption({
 }
 
 const styles = StyleSheet.create({
+  hint: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   flex: { flex: 1 },
   noWrap: { flexWrap: 'nowrap' },
   thumb: { width: 64, height: 36, borderRadius: 6, backgroundColor: colors.border },

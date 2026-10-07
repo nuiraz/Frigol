@@ -8,6 +8,7 @@ export type PlayerEvent =
   | { type: 'segmentStart' }
   | { type: 'segmentEnd' }
   | { type: 'stalled' }
+  | { type: 'ad' }
   | { type: 'error'; code: number | 'timeout' }
   | { type: 'playlist'; ids: string[] };
 

@@ -20,7 +20,7 @@ function makeController(player, send) { ${CONTROLLER_SOURCE} }
 var s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
 window.onYouTubeIframeAPIReady = function () {
   var player = new YT.Player('p', {
-    width: '100%', height: '100%',
+    width: '100%', height: '100%', host: 'https://www.youtube-nocookie.com',
     playerVars: Object.assign(${JSON.stringify(PLAYER_VARS)}, { origin: location.origin }),
     events: {
       onReady: function () {

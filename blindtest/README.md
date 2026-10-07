@@ -75,19 +75,17 @@ Ces fonctions utilisent [Supabase](https://supabase.com) (gratuit). Tant qu’il
    (La clé anon est publique par nature ; la sécurité repose sur les règles du fichier SQL.)
 5. `npm run build:web` puis pousse pour mettre à jour le site.
 
-### Catégories synchronisées sur tous les appareils
+### Catalogue commun : toutes les musiques sur tous les comptes
 
-- **Chaque joueur connecté** retrouve ses propres catégories sur tous ses appareils (table `user_libraries`).
-- **L’administrateur** publie en plus ses catégories pour tout le monde (catalogue).
-
-
-Les catégories et playlists importées par l’administrateur sont enregistrées dans la base (table `catalog_categories`) et téléchargées par tous les joueurs au lancement de l’app, sur mobile comme sur PC.
-
-Pour devenir administrateur : crée ton compte dans l’app, puis dans Supabase → SQL Editor :
+Chaque playlist importée par un joueur **connecté** est publiée dans la base (table `catalog_categories`) et reçue par tout le monde, sur tous les appareils, même sans compte. L’app vérifie les nouveautés au lancement, au retour dans l’app et toutes les 90 secondes.
+Seul l’auteur d’une catégorie (ou un administrateur) peut la modifier ou la supprimer. Pour être administrateur :
 ```sql
 update public.profiles set is_admin = true where username = 'TonPseudo';
 ```
-Ensuite, chaque import ou modification faite connecté avec ce compte est publiée automatiquement (état visible dans Administration).
+
+### Publicités YouTube
+
+Le lecteur utilise le mode « confidentialité renforcée » (youtube-nocookie.com). S’il reste une publicité, elle passe pendant le chargement, son coupé : l’extrait ne démarre qu’une fois la vraie musique lancée.
 
 Modération : les signalements arrivent dans la table `reports` (Table Editor) ; supprime une playlist depuis `shared_playlists`.
 Pense à compléter l’éditeur et l’e-mail de contact dans `src/lib/config.ts` (objet `LEGAL`) pour les mentions légales.

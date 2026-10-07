@@ -170,8 +170,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       mergeCatalog: (remote) =>
         setData((d) => {
           const ids = new Set(remote.map((c) => c.id));
-          // Les catégories de démo disparaissent dès qu'un vrai catalogue existe.
-          const local = d.categories.filter((c) => !ids.has(c.id) && !(remote.length && c.id.startsWith('demo-')));
+          // On garde les catégories locales pas encore publiées ; celles retirées du catalogue disparaissent,
+          // et la démo s'efface dès qu'un vrai catalogue existe.
+          const local = d.categories.filter(
+            (c) => !ids.has(c.id) && c.ownerId === undefined && !(remote.length && c.id.startsWith('demo-')),
+          );
           return { ...d, categories: [...remote, ...local] };
         }),
       resetToDemo: () => setData((d) => ({ ...createDefaultData(), settings: d.settings })),

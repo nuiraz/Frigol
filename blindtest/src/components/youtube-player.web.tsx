@@ -57,6 +57,8 @@ export function YouTubePlayer({ ref, onEvent, visible = false, style }: YouTubeP
       player = new YT.Player(mount, {
         width: '100%',
         height: '100%',
+        // Mode « confidentialité renforcée » : moins de publicités et pas de cookies de suivi.
+        host: 'https://www.youtube-nocookie.com',
         playerVars: { ...PLAYER_VARS, origin: window.location.origin },
         events: {
           onReady: () => {

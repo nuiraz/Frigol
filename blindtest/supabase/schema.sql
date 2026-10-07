@@ -203,3 +203,22 @@ alter table public.user_libraries enable row level security;
 drop policy if exists "bibliothèque personnelle" on public.user_libraries;
 create policy "bibliothèque personnelle" on public.user_libraries
   for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- =============================================================
+-- Catalogue commun : chaque joueur connecté y publie les catégories
+-- qu'il importe, et tout le monde les reçoit. Seul l'auteur (ou un
+-- administrateur) peut modifier ou supprimer une catégorie.
+-- =============================================================
+alter table public.catalog_categories
+  add column if not exists owner_id uuid default auth.uid() references public.profiles (id) on delete set null;
+drop policy if exists "catalogue géré par l'admin" on public.catalog_categories;
+drop policy if exists "ajout au catalogue" on public.catalog_categories;
+create policy "ajout au catalogue" on public.catalog_categories
+  for insert to authenticated with check (owner_id = auth.uid() or public.is_admin());
+drop policy if exists "modification par l'auteur" on public.catalog_categories;
+create policy "modification par l'auteur" on public.catalog_categories
+  for update to authenticated using (owner_id = auth.uid() or public.is_admin())
+  with check (owner_id = auth.uid() or public.is_admin());
+drop policy if exists "suppression par l'auteur" on public.catalog_categories;
+create policy "suppression par l'auteur" on public.catalog_categories
+  for delete to authenticated using (owner_id = auth.uid() or public.is_admin());
