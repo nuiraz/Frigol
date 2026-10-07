@@ -1,7 +1,8 @@
 import Feather from '@expo/vector-icons/Feather';
-import type { ComponentProps, ReactNode } from 'react';
+import { useSyncExternalStore, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,7 +21,21 @@ import { colors, fonts, radius } from '@/lib/theme';
 
 export type IconName = ComponentProps<typeof Feather>['name'];
 
+const noopSubscribe = () => () => {};
+
+/** Faux pendant le pré-rendu web et l'hydratation, vrai ensuite. */
+function useHydrated() {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 export function Icon({ name, size = 18, color = colors.text }: { name: IconName; size?: number; color?: string }) {
+  const hydrated = useHydrated();
+  // La police d'icônes n'est pas connue au pré-rendu : on réserve la place pour éviter un décalage d'hydratation.
+  if (Platform.OS === 'web' && !hydrated) return <View style={{ width: size, height: size }} />;
   return <Feather name={name} size={size} color={color} />;
 }
 

@@ -189,3 +189,17 @@ create policy "catalogue géré par l'admin" on public.catalog_categories
 -- Pour devenir administrateur, après avoir créé ton compte dans l'app, exécute
 -- (en remplaçant le pseudo) :
 --   update public.profiles set is_admin = true where username = 'TonPseudo';
+
+-- =============================================================
+-- Bibliothèque personnelle : les catégories d'un joueur connecté
+-- le suivent sur tous ses appareils (PC, téléphone…).
+-- =============================================================
+create table if not exists public.user_libraries (
+  user_id uuid primary key default auth.uid() references public.profiles (id) on delete cascade,
+  categories jsonb not null default '[]' check (jsonb_typeof(categories) = 'array'),
+  updated_at timestamptz not null default now()
+);
+alter table public.user_libraries enable row level security;
+drop policy if exists "bibliothèque personnelle" on public.user_libraries;
+create policy "bibliothèque personnelle" on public.user_libraries
+  for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);

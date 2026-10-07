@@ -9,11 +9,15 @@ export const CONTROLLER_SOURCE = `
 var phase = 'idle';
 var target = { start: 0, duration: 0, startMode: 'random' };
 var segTimer = null;
+var segRemaining = null; // millisecondes d'extrait restant à jouer
+var segStartedAt = 0;
+var segWatch = null;
 var watchdog = null;
 var playlistTries = 0;
 
 function clearTimers() {
   if (segTimer) { clearTimeout(segTimer); segTimer = null; }
+  if (segWatch) { clearTimeout(segWatch); segWatch = null; }
   if (watchdog) { clearTimeout(watchdog); watchdog = null; }
 }
 
@@ -25,8 +29,22 @@ function pickStart(duration) {
   return Math.floor(min + Math.random() * (max - min));
 }
 
+function runSegmentTimer() {
+  segStartedAt = Date.now();
+  segTimer = setTimeout(endSegment, segRemaining);
+}
+
+/** Le son s'est interrompu (chargement réseau) : on met le chrono de l'extrait en pause. */
+function holdSegmentTimer() {
+  if (!segTimer) return;
+  clearTimeout(segTimer);
+  segTimer = null;
+  segRemaining = Math.max(0, segRemaining - (Date.now() - segStartedAt));
+}
+
 function endSegment() {
   clearTimers();
+  segRemaining = null;
   phase = 'idle';
   try { player.pauseVideo(); } catch (e) {}
   send({ type: 'segmentEnd' });
@@ -61,9 +79,12 @@ return {
       phase = 'prepared';
       send({ type: 'prepared', start: target.start, duration: duration });
     } else if (s === 1 && phase === 'segment' && !segTimer) {
-      // Le chrono démarre seulement quand le son sort vraiment : la mise en mémoire ne pénalise pas.
-      send({ type: 'segmentStart' });
-      segTimer = setTimeout(endSegment, target.duration * 1000);
+      // Le chrono de l'extrait ne tourne que quand le son sort vraiment : les chargements ne le raccourcissent pas.
+      if (segWatch) { clearTimeout(segWatch); segWatch = null; }
+      if (segRemaining === null) { segRemaining = target.duration * 1000; send({ type: 'segmentStart' }); }
+      runSegmentTimer();
+    } else if ((s === 3 || s === 2) && phase === 'segment') {
+      holdSegmentTimer();
     } else if (s === 0 && phase === 'segment') {
       endSegment();
     } else if (s === 5 && phase === 'playlist') {
@@ -99,6 +120,7 @@ return {
   segment: function (duration, start) {
     clearTimers();
     phase = 'segment';
+    segRemaining = null;
     target.duration = duration;
     if (typeof start === 'number') target.start = start;
     player.unMute();
@@ -106,12 +128,18 @@ return {
     player.seekTo(target.start, true);
     player.playVideo();
     if (player.getPlayerState() === 1) {
+      segRemaining = target.duration * 1000;
       send({ type: 'segmentStart' });
-      segTimer = setTimeout(endSegment, target.duration * 1000);
+      runSegmentTimer();
     }
+    // Si rien ne joue au bout de 8 s, on le signale pour proposer de passer le morceau.
+    segWatch = setTimeout(function () {
+      if (phase === 'segment' && segRemaining === null) send({ type: 'stalled' });
+    }, 8000);
   },
   stop: function () {
     clearTimers();
+    segRemaining = null;
     phase = 'idle';
     try { player.pauseVideo(); } catch (e) {}
   },

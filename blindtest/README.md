@@ -77,6 +77,10 @@ Ces fonctions utilisent [Supabase](https://supabase.com) (gratuit). Tant qu’il
 
 ### Catégories synchronisées sur tous les appareils
 
+- **Chaque joueur connecté** retrouve ses propres catégories sur tous ses appareils (table `user_libraries`).
+- **L’administrateur** publie en plus ses catégories pour tout le monde (catalogue).
+
+
 Les catégories et playlists importées par l’administrateur sont enregistrées dans la base (table `catalog_categories`) et téléchargées par tous les joueurs au lancement de l’app, sur mobile comme sur PC.
 
 Pour devenir administrateur : crée ton compte dans l’app, puis dans Supabase → SQL Editor :

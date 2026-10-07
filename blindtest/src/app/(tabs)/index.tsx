@@ -28,7 +28,7 @@ export default function Home() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topBar}>
           <Text style={styles.wordmark}>
@@ -36,13 +36,6 @@ export default function Home() {
           </Text>
           <View style={styles.topActions}>
             <IconButton icon="share-2" label="Inviter" onPress={() => router.push('/share')} />
-            {auth.profile ? (
-              <Pressable onPress={() => router.push('/account')} style={styles.avatar} accessibilityLabel="Compte">
-                <Text style={styles.avatarEmoji}>{auth.profile.avatar}</Text>
-              </Pressable>
-            ) : (
-              <IconButton icon="user" label="Compte" onPress={() => router.push('/account')} />
-            )}
           </View>
         </View>
 
@@ -68,7 +61,7 @@ export default function Home() {
             icon="sliders"
             title="Partie personnalisée"
             subtitle="Niveau, catégories, mode 1 seconde…"
-            onPress={() => router.push({ pathname: '/setup', params: { mode: 'solo' } })}
+            onPress={() => router.push('/play')}
           />
           <Divider />
           <ListRow
@@ -76,20 +69,6 @@ export default function Home() {
             title="Soirée entre amis"
             subtitle="Plusieurs joueurs, un seul écran"
             onPress={() => router.push({ pathname: '/setup', params: { mode: 'soiree' } })}
-          />
-          <Divider />
-          <ListRow
-            icon="bar-chart-2"
-            title="Classement mondial"
-            subtitle="Les meilleurs scores des joueurs"
-            onPress={() => router.push('/leaderboard')}
-          />
-          <Divider />
-          <ListRow
-            icon="globe"
-            title="Communauté"
-            subtitle="Playlists partagées par les joueurs"
-            onPress={() => router.push('/hub')}
           />
           <Divider />
           <ListRow
@@ -173,15 +152,6 @@ const styles = StyleSheet.create({
   wordmark: { fontFamily: fonts.display, color: colors.text, fontSize: 20, letterSpacing: 1 },
   wordmarkAccent: { color: colors.accent },
   topActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
-  },
-  avatarEmoji: { fontSize: 22 },
   hero: { gap: 10, paddingTop: 12 },
   headline: { fontFamily: fonts.display, color: colors.text, fontSize: 76, lineHeight: 78, textTransform: 'uppercase' },
   accent: { color: colors.accent },

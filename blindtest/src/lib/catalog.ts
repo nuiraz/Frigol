@@ -57,3 +57,21 @@ export async function pushCatalog(all: Category[], changed: Category[], removedI
     if (error) throw new Error(error.message);
   }
 }
+
+/** Catégories personnelles de l'utilisateur connecté (synchronisées entre ses appareils). */
+export async function fetchLibrary(userId: string): Promise<Category[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb.from('user_libraries').select('categories').eq('user_id', userId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return ((data?.categories as Category[] | undefined) ?? []).filter((c) => c && c.id);
+}
+
+export async function pushLibrary(userId: string, categories: Category[]) {
+  const sb = getSupabase();
+  if (!sb) return;
+  const { error } = await sb
+    .from('user_libraries')
+    .upsert({ user_id: userId, categories, updated_at: new Date().toISOString() });
+  if (error) throw new Error(error.message);
+}

@@ -157,6 +157,27 @@ export default function Game() {
 
   useEffect(() => () => player.current?.stop(), []);
 
+  // Sur ordinateur : touches 1 à 4 pour répondre, Entrée pour passer au morceau suivant.
+  const keyHandler = useRef<(e: KeyboardEvent) => void>(() => {});
+  useEffect(() => {
+    keyHandler.current = (e) => {
+      if ((e.target as HTMLElement | null)?.tagName === 'INPUT') return;
+      const n = Number(e.key);
+      if (n >= 1 && n <= choices.length && answerMode === 'qcm') pick(choices[n - 1]);
+      else if (e.key === 'Enter' && phase === 'reveal' && !party) nextTrack();
+      else if (e.key === ' ' && phase === 'ready') {
+        e.preventDefault();
+        listen();
+      }
+    };
+  });
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const onKey = (e: KeyboardEvent) => keyHandler.current(e);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   function onPlayerEvent(e: PlayerEvent) {
     if (e.type === 'prepared' && phase === 'loading') {
       setStart(e.start);
@@ -171,6 +192,8 @@ export default function Game() {
     } else if (e.type === 'segmentStart' && phase === 'listening' && deadline == null) {
       setStalled(false);
       setDeadline(Date.now() + difficulty.answerTime * 1000);
+    } else if (e.type === 'stalled' && phase === 'listening') {
+      setStalled(true);
     } else if (e.type === 'segmentEnd' && phase === 'listening') {
       setPhase('answering');
     } else if (e.type === 'error' && (phase === 'loading' || phase === 'ready' || phase === 'listening')) {
@@ -366,7 +389,7 @@ export default function Game() {
                 onPress={listen}
               />
             )}
-            {phase === 'loading' && slow && (
+            {((phase === 'loading' && slow) || (listening && stalled)) && (
               <Button
                 label="Ce morceau ne charge pas, passer"
                 icon="skip-forward"
@@ -430,6 +453,10 @@ export default function Game() {
               );
             })}
           </View>
+        )}
+
+        {!party && answerMode === 'qcm' && (listening || phase === 'answering') && (
+          <Button label="Je ne sais pas" variant="ghost" small onPress={() => finishRound(false, '—')} />
         )}
 
         {!party && answerMode === 'texte' && (listening || phase === 'answering') && (

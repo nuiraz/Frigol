@@ -41,7 +41,7 @@ function Hub() {
   }, [order, query]);
 
   return (
-    <Screen>
+    <Screen edges={['top', 'left', 'right']}>
       <View style={styles.hero}>
         <Text style={styles.title}>Hub communautaire</Text>
         <Muted style={styles.center}>

@@ -20,7 +20,7 @@ export function OnlineGate({
   const auth = useAuth();
   if (!auth.enabled) {
     return (
-      <Screen>
+      <Screen edges={['top', 'bottom', 'left', 'right']}>
         <Card style={styles.center}>
           <Icon name="cloud-off" size={36} color={colors.muted} />
           <Label>Fonctions en ligne bientôt disponibles</Label>
@@ -34,14 +34,14 @@ export function OnlineGate({
   }
   if (!auth.ready) {
     return (
-      <Screen>
+      <Screen edges={['top', 'bottom', 'left', 'right']}>
         <ActivityIndicator color={colors.accent} style={styles.loader} />
       </Screen>
     );
   }
   if (needAccount && !auth.session) {
     return (
-      <Screen>
+      <Screen edges={['top', 'bottom', 'left', 'right']}>
         <Card style={styles.center}>
           <Icon name="user" size={36} color={colors.muted} />
           <Label>Connexion requise</Label>

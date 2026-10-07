@@ -15,20 +15,20 @@ function SyncCard() {
   if (!auth.enabled) return null;
   const admin = !!auth.profile?.is_admin;
   const line = !auth.session
-    ? 'Connecte-toi avec ton compte administrateur : tes catégories seront envoyées sur tous les appareils.'
-    : !admin
-      ? `Le compte « ${auth.profile?.username ?? ''} » n’est pas administrateur. Dans Supabase → SQL Editor, exécute : update profiles set is_admin = true where username = '${auth.profile?.username ?? 'TonPseudo'}';`
-      : status === 'saving'
-        ? 'Envoi des modifications…'
-        : status === 'error'
-          ? 'Échec de la synchronisation. Vérifie ta connexion.'
-          : status === 'loading'
-            ? 'Récupération du catalogue…'
-            : 'Synchronisé : tous les joueurs reçoivent ces catégories, sur mobile comme sur PC.';
-  const color = admin && status !== 'error' ? colors.success : status === 'error' ? colors.danger : colors.muted;
+    ? 'Connecte-toi : tes catégories seront enregistrées en ligne et tu les retrouveras sur tous tes appareils.'
+    : status === 'saving'
+      ? 'Envoi des modifications…'
+      : status === 'error'
+        ? 'Échec de la synchronisation. Vérifie ta connexion.'
+        : status === 'loading'
+          ? 'Synchronisation…'
+          : admin
+            ? 'Synchronisé : tous les joueurs reçoivent ces catégories, sur mobile comme sur PC.'
+            : 'Synchronisé avec ton compte : tu retrouves ces catégories sur tous tes appareils.';
+  const color = auth.session && status !== 'error' ? colors.success : status === 'error' ? colors.danger : colors.muted;
   return (
     <Card style={styles.sync}>
-      <Icon name={admin ? (status === 'error' ? 'cloud-off' : 'cloud') : 'upload-cloud'} color={color} />
+      <Icon name={auth.session ? (status === 'error' ? 'cloud-off' : 'cloud') : 'upload-cloud'} color={color} />
       <Muted style={styles.syncText}>{line}</Muted>
       {!auth.session && <Button label="Connexion" small variant="secondary" onPress={() => router.push('/account')} />}
     </Card>

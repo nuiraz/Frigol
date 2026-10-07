@@ -7,6 +7,7 @@ export type PlayerEvent =
   | { type: 'prepared'; start: number; duration: number }
   | { type: 'segmentStart' }
   | { type: 'segmentEnd' }
+  | { type: 'stalled' }
   | { type: 'error'; code: number | 'timeout' }
   | { type: 'playlist'; ids: string[] };
 

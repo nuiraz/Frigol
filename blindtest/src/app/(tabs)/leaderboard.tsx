@@ -47,7 +47,7 @@ function Leaderboard() {
   const myRank = rows?.findIndex((r) => r.user_id === me) ?? -1;
 
   return (
-    <Screen>
+    <Screen edges={['top', 'left', 'right']}>
       <View style={styles.hero}>
         <Text style={styles.title}>Classement mondial</Text>
       </View>
@@ -56,7 +56,8 @@ function Leaderboard() {
         {DIFFICULTIES.map((d) => (
           <Chip
             key={d.id}
-            label={`${d.emoji} ${d.label}`}
+            label={d.label}
+            dot={d.color}
             selected={difficulty === d.id}
             color={d.color}
             onPress={() => setDifficulty(d.id)}

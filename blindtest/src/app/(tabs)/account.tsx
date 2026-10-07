@@ -2,8 +2,9 @@ import { Link, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useSyncStatus } from '@/components/catalog-sync';
 import { OnlineGate } from '@/components/online-gate';
-import { Button, Card, Chip, Input, Label, Muted, Row, Screen } from '@/components/ui';
+import { Button, Card, Chip, Icon, Input, Label, Muted, Row, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { confirmAction, notify } from '@/lib/dialogs';
 import { getSupabase } from '@/lib/supabase';
@@ -208,6 +209,7 @@ function ProfileView() {
   const profile = auth.profile;
   const [username, setUsername] = useState(profile?.username ?? '');
   const [stats, setStats] = useState<{ games: number; best: number } | null>(null);
+  const sync = useSyncStatus();
 
   useEffect(() => {
     const sb = getSupabase();
@@ -253,6 +255,20 @@ function ProfileView() {
         <Muted>{auth.session?.user.email}</Muted>
       </View>
 
+      <Card style={styles.syncCard}>
+        <Icon
+          name={sync === 'error' ? 'cloud-off' : 'cloud'}
+          color={sync === 'error' ? colors.danger : colors.success}
+        />
+        <Muted style={styles.flex}>
+          {sync === 'error'
+            ? 'Synchronisation impossible pour le moment.'
+            : sync === 'saving' || sync === 'loading'
+              ? 'Synchronisation de tes catégories…'
+              : 'Tes catégories sont synchronisées : tu les retrouves sur PC comme sur téléphone.'}
+        </Muted>
+      </Card>
+
       <Row style={styles.stats}>
         <Card style={styles.stat}>
           <Text style={styles.statValue}>{stats?.games ?? '–'}</Text>
@@ -292,6 +308,7 @@ function ProfileView() {
 }
 
 const styles = StyleSheet.create({
+  syncCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hero: { alignItems: 'center', gap: 6, paddingVertical: 16 },
   heroIcon: { fontSize: 64 },
   heroTitle: {
