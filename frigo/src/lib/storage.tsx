@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, use, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+import type { RecipeTranslation } from './translate';
 import type { Recipe } from './types';
 
 const KEY = 'frigo:v1';
@@ -13,7 +14,14 @@ type Saved = {
   history: Recipe[];
   /** Ingrédients cochés dans « Mon frigo ». */
   fridge: string[];
+  /** Traductions françaises des recettes TheMealDB, par identifiant. */
+  translations: Record<string, RecipeTranslation>;
+  /** Traduire automatiquement les recettes TheMealDB. */
+  autoTranslate: boolean;
+  shopping: ShoppingItem[];
 };
+
+export type ShoppingItem = { id: string; name: string; quantity?: string; recipe?: string; done: boolean };
 
 type Storage = Saved & {
   loaded: boolean;
@@ -23,9 +31,15 @@ type Storage = Saved & {
   clearHistory: () => void;
   toggleFridge: (id: string) => void;
   setFridge: (ids: string[]) => void;
+  saveTranslation: (id: string, t: RecipeTranslation) => void;
+  setAutoTranslate: (on: boolean) => void;
+  /** Ajoute des articles à la liste de courses (sans doublon) ; renvoie le nombre ajouté. */
+  addShopping: (items: Omit<ShoppingItem, 'id' | 'done'>[]) => number;
+  toggleShopping: (id: string) => void;
+  removeShopping: (ids: string[]) => void;
 };
 
-const empty: Saved = { favorites: [], history: [], fridge: [] };
+const empty: Saved = { favorites: [], history: [], fridge: [], translations: {}, autoTranslate: false, shopping: [] };
 const StorageContext = createContext<Storage | null>(null);
 
 export function StorageProvider({ children }: { children: ReactNode }) {
@@ -73,6 +87,28 @@ export function StorageProvider({ children }: { children: ReactNode }) {
           fridge: s.fridge.includes(id) ? s.fridge.filter((x) => x !== id) : [...s.fridge, id],
         })),
       setFridge: (ids) => setSaved((s) => ({ ...s, fridge: [...new Set(ids)] })),
+      saveTranslation: (id, t) => setSaved((s) => ({ ...s, translations: { ...s.translations, [id]: t } })),
+      setAutoTranslate: (on) => setSaved((s) => ({ ...s, autoTranslate: on })),
+      addShopping: (items) => {
+        const known = new Set(saved.shopping.filter((x) => !x.done).map((x) => x.name.toLowerCase()));
+        const fresh = items.filter((x) => !known.has(x.name.toLowerCase()));
+        if (fresh.length)
+          setSaved((s) => ({
+            ...s,
+            shopping: [
+              ...s.shopping,
+              ...fresh.map((x) => ({
+                ...x,
+                id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+                done: false,
+              })),
+            ],
+          }));
+        return fresh.length;
+      },
+      toggleShopping: (id) =>
+        setSaved((s) => ({ ...s, shopping: s.shopping.map((x) => (x.id === id ? { ...x, done: !x.done } : x)) })),
+      removeShopping: (ids) => setSaved((s) => ({ ...s, shopping: s.shopping.filter((x) => !ids.includes(x.id)) })),
     };
   }, [saved, loaded]);
 

@@ -33,6 +33,45 @@ const CATEGORY_FR: Record<string, string> = {
   Goat: 'Chèvre',
 };
 
+const AREA_FR: Record<string, string> = {
+  American: 'américaine',
+  British: 'britannique',
+  Canadian: 'canadienne',
+  Chinese: 'chinoise',
+  Croatian: 'croate',
+  Dutch: 'néerlandaise',
+  Egyptian: 'égyptienne',
+  Filipino: 'philippine',
+  French: 'française',
+  Greek: 'grecque',
+  Indian: 'indienne',
+  Irish: 'irlandaise',
+  Italian: 'italienne',
+  Jamaican: 'jamaïcaine',
+  Japanese: 'japonaise',
+  Kenyan: 'kényane',
+  Malaysian: 'malaisienne',
+  Mexican: 'mexicaine',
+  Moroccan: 'marocaine',
+  Polish: 'polonaise',
+  Portuguese: 'portugaise',
+  Russian: 'russe',
+  Spanish: 'espagnole',
+  Thai: 'thaïlandaise',
+  Tunisian: 'tunisienne',
+  Turkish: 'turque',
+  Ukrainian: 'ukrainienne',
+  Vietnamese: 'vietnamienne',
+  Norwegian: 'norvégienne',
+  Uruguayan: 'uruguayenne',
+  Venezulan: 'vénézuélienne',
+  Argentinian: 'argentine',
+  Australian: 'australienne',
+  Saudi: 'saoudienne',
+  Syrian: 'syrienne',
+  Algerian: 'algérienne',
+};
+
 export const MEALDB_CATEGORIES = Object.keys(CATEGORY_FR);
 export const categoryLabel = (c: string) => CATEGORY_FR[c] ?? c;
 
@@ -69,8 +108,9 @@ function toRecipe(m: Meal): Recipe {
     emoji: '🍽️',
     servings: 4,
     category: categoryLabel(m.strCategory ?? ''),
-    tags: [m.strArea, ...(m.strTags?.split(',') ?? [])].filter((t): t is string => !!t?.trim()).map((t) => t.trim()),
-    description: m.strArea ? `Cuisine ${m.strArea}` : undefined,
+    tags: (m.strTags?.split(',') ?? []).map((t) => t.trim()).filter(Boolean),
+    description:
+      m.strArea && m.strArea !== 'Unknown' ? `Cuisine ${AREA_FR[m.strArea] ?? m.strArea.toLowerCase()}` : undefined,
     ingredients,
     steps,
   };

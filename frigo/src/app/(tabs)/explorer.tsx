@@ -14,8 +14,11 @@ import {
   type MealCard,
 } from '@/lib/mealdb';
 import { rememberRecipes } from '@/lib/recipes';
+import { useStorage } from '@/lib/storage';
 import { normalize } from '@/lib/text';
+import { translateToEnglish } from '@/lib/translate';
 import { colors, radius } from '@/lib/theme';
+import { useTranslatedTitles } from '@/lib/use-translation';
 
 export default function Explorer() {
   const [query, setQuery] = useState('');
@@ -38,10 +41,17 @@ export default function Explorer() {
     const id = setTimeout(
       () => {
         const request = q
-          ? searchMeals(query).then((recipes) => {
-              rememberRecipes(recipes);
-              return recipes.map((r) => ({ id: r.id, title: r.title, image: r.image! }));
-            })
+          ? searchMeals(query)
+              // Rien trouvé ? La recherche est sans doute en français : on la traduit en anglais.
+              .then(async (found) => {
+                if (found.length) return found;
+                const en = (await translateToEnglish(query).catch(() => query)).trim();
+                return en && normalize(en) !== q ? searchMeals(en) : [];
+              })
+              .then((recipes) => {
+                rememberRecipes(recipes);
+                return recipes.map((r) => ({ id: r.id, title: r.title, image: r.image! }));
+              })
           : mealsByCategory(category);
         request
           .then((items) => !cancelled && setResponse({ key, items }))
@@ -59,8 +69,10 @@ export default function Explorer() {
     };
   }, [q, query, category]);
 
+  const { autoTranslate, setAutoTranslate } = useStorage();
   const current = response?.key === (q ? `q:${q}` : `c:${category}`) ? response : null;
   const results = current?.items ?? null;
+  const titleOf = useTranslatedTitles(results);
   const shownError = current?.error ?? error;
 
   const surprise = async () => {
@@ -117,18 +129,28 @@ export default function Explorer() {
           </ScrollView>
         )}
         <SectionTitle title={q ? 'Du monde entier' : categoryLabel(category)} />
-        <Txt variant="small">Source : TheMealDB (recettes en anglais)</Txt>
+        <View style={styles.sourceRow}>
+          <Txt variant="small" style={styles.flex}>
+            Source : TheMealDB
+          </Txt>
+          <Chip
+            label="En français"
+            leading="🇫🇷"
+            selected={autoTranslate}
+            onPress={() => setAutoTranslate(!autoTranslate)}
+          />
+        </View>
         {shownError ? (
           <Empty icon="wifi-off" title="Hors ligne" hint={shownError} />
         ) : !results ? (
           <ActivityIndicator color={colors.accent} style={styles.loader} />
         ) : results.length === 0 ? (
-          <Empty icon="search" title="Aucun résultat" hint="Essaie en anglais : « chicken », « soup », « cake »…" />
+          <Empty icon="search" title="Aucun résultat" hint="Essaie un autre mot : « poulet », « soupe », « gâteau »…" />
         ) : (
           <View style={styles.grid}>
             {results.slice(0, 40).map((m) => (
               <View key={m.id} style={styles.cell}>
-                <MealTile {...m} />
+                <MealTile {...m} title={titleOf(m.id, m.title)} />
               </View>
             ))}
           </View>
@@ -156,4 +178,6 @@ const styles = StyleSheet.create({
   loader: { marginVertical: 30 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   cell: { width: '47%', flexGrow: 1 },
+  sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  flex: { flex: 1 },
 });

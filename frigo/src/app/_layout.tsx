@@ -49,6 +49,7 @@ export default function RootLayout() {
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="recette/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="categorie/[name]" options={{ title: 'Catégorie' }} />
           <Stack.Screen name="cuisine/[id]" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         </Stack>
       </ThemeProvider>

@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,12 +10,16 @@ import { Button, Empty, Icon, IconButton, Txt } from '@/components/ui';
 import { hasIngredient, matchRecipe } from '@/lib/matching';
 import { LOCAL_RECIPES } from '@/data/recipes';
 import { scaleQuantity, useRecipe } from '@/lib/recipes';
+import { useTranslatedRecipe } from '@/lib/use-translation';
 import { useStorage } from '@/lib/storage';
 import { colors, fonts, radius } from '@/lib/theme';
 
 export default function RecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { recipe, loading, error } = useRecipe(id);
+  const { recipe: source, loading, error } = useRecipe(id);
+  const tr = useTranslatedRecipe(source);
+  const recipe = tr.display;
+  const [added, setAdded] = useState<number | null>(null);
   const storage = useStorage();
   const insets = useSafeAreaInsets();
   const [servings, setServings] = useState<number | null>(null);
@@ -23,8 +28,8 @@ export default function RecipeScreen() {
   const fridge = useMemo(() => new Set(storage.fridge), [storage.fridge]);
   const { addToHistory } = storage;
   useEffect(() => {
-    if (recipe) addToHistory(recipe);
-  }, [recipe, addToHistory]);
+    if (source) addToHistory(source);
+  }, [source, addToHistory]);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
@@ -49,7 +54,7 @@ export default function RecipeScreen() {
   const favorite = storage.isFavorite(recipe.id);
 
   const toggleFavorite = () => {
-    storage.toggleFavorite(recipe);
+    storage.toggleFavorite(source!);
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
   const toggleLine = (i: number) =>
@@ -63,7 +68,16 @@ export default function RecipeScreen() {
   return (
     <View style={styles.safe}>
       <ScrollView contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}>
-        <RecipeVisual recipe={recipe} style={[styles.hero, { height: 280 + insets.top }]} emojiSize={110} />
+        <View>
+          <RecipeVisual recipe={recipe} style={[styles.hero, { height: 300 + insets.top }]} emojiSize={110} />
+          {!!recipe.image && (
+            <LinearGradient
+              colors={['rgba(0,0,0,0.35)', 'rgba(0,0,0,0)']}
+              style={[styles.heroShade, { height: 110 + insets.top }]}
+              pointerEvents="none"
+            />
+          )}
+        </View>
         <View style={[styles.topBar, { top: insets.top + 8 }]}>
           <IconButton icon="arrow-left" label="Retour" filled onPress={back} />
           <IconButton
@@ -88,6 +102,44 @@ export default function RecipeScreen() {
             <Fact icon="list" label={`${recipe.steps.length} étapes`} />
           </View>
 
+          {tr.translatable && (
+            <View style={styles.translateBar}>
+              <Icon name="globe" size={18} color={colors.accent} />
+              <View style={styles.translateText}>
+                <Text style={styles.translateTitle}>
+                  {tr.loading ? 'Traduction en cours…' : tr.translated ? 'Traduit en français' : 'Recette en anglais'}
+                </Text>
+                <Text style={styles.translateHint}>
+                  {tr.failed
+                    ? 'Traduction impossible (connexion ?). Réessaie.'
+                    : tr.translated
+                      ? 'Traduction automatique : quelques tournures peuvent être approximatives.'
+                      : `Source TheMealDB · environ ${recipe.servings} personnes`}
+                </Text>
+              </View>
+              {tr.loading ? (
+                <ActivityIndicator color={colors.accent} />
+              ) : tr.translated ? (
+                <Pressable onPress={tr.showOriginal} hitSlop={8}>
+                  <Text style={styles.translateAction}>Original</Text>
+                </Pressable>
+              ) : (
+                <Button label="Traduire" icon="globe" small onPress={tr.translate} />
+              )}
+            </View>
+          )}
+          {tr.translatable && tr.hasTranslation && (
+            <Pressable
+              onPress={() => storage.setAutoTranslate(!storage.autoTranslate)}
+              style={styles.autoRow}
+              hitSlop={6}>
+              <View style={[styles.switch, storage.autoTranslate && styles.switchOn]}>
+                <View style={[styles.knob, storage.autoTranslate && styles.knobOn]} />
+              </View>
+              <Text style={styles.autoText}>Toujours traduire les recettes du monde</Text>
+            </Pressable>
+          )}
+
           {fridge.size > 0 && (
             <View style={[styles.fridgeNote, match.missing.length === 0 ? styles.noteOk : styles.noteWarn]}>
               <Icon
@@ -101,11 +153,30 @@ export default function RecipeScreen() {
               </Text>
             </View>
           )}
-
-          {recipe.source === 'mealdb' && (
-            <Txt variant="small">
-              Recette TheMealDB, en anglais. Les quantités sont pour {recipe.servings} personnes environ.
-            </Txt>
+          {match.missing.length > 0 && (
+            <Button
+              label={
+                added != null
+                  ? added
+                    ? `${added} article${added > 1 ? 's' : ''} ajouté${added > 1 ? 's' : ''} à ta liste`
+                    : 'Déjà dans ta liste de courses'
+                  : `Ajouter ${fridge.size ? 'les manquants' : 'les ingrédients'} à ma liste de courses`
+              }
+              icon={added != null ? 'check' : 'shopping-cart'}
+              variant="secondary"
+              small
+              onPress={() =>
+                setAdded(
+                  storage.addShopping(
+                    match.missing.map((m) => ({
+                      name: m.name,
+                      quantity: scaleQuantity(m.quantity, factor),
+                      recipe: recipe.title,
+                    })),
+                  ),
+                )
+              }
+            />
           )}
 
           <View style={styles.sectionHead}>
@@ -192,6 +263,27 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   loader: { marginTop: 80 },
   hero: { borderRadius: 0, width: '100%' },
+  heroShade: { position: 'absolute', top: 0, left: 0, right: 0 },
+  translateBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  translateText: { flex: 1, gap: 2 },
+  translateTitle: { fontFamily: fonts.bold, color: colors.text, fontSize: 15 },
+  translateHint: { fontFamily: fonts.regular, color: colors.muted, fontSize: 12.5, lineHeight: 17 },
+  translateAction: { fontFamily: fonts.bold, color: colors.accent, fontSize: 14 },
+  autoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: -6 },
+  switch: { width: 38, height: 22, borderRadius: 11, backgroundColor: colors.border, padding: 2 },
+  switchOn: { backgroundColor: colors.accent },
+  knob: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#fff' },
+  knobOn: { transform: [{ translateX: 16 }] },
+  autoText: { fontFamily: fonts.medium, color: colors.muted, fontSize: 13.5 },
   topBar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
   topBarStatic: { padding: 16 },
   body: {

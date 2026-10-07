@@ -8,6 +8,7 @@ import { LOCAL_RECIPES } from '@/data/recipes';
 import { rankRecipes, searchIngredients } from '@/lib/matching';
 import { mealsByIngredient, type MealCard } from '@/lib/mealdb';
 import { useStorage } from '@/lib/storage';
+import { useTranslatedTitles } from '@/lib/use-translation';
 import { colors, fonts, radius } from '@/lib/theme';
 import type { IngredientCategory } from '@/lib/types';
 
@@ -192,11 +193,32 @@ export default function Fridge() {
             hint="Élargis le filtre des ingrédients manquants ou ajoute d’autres ingrédients."
           />
         ) : (
-          <View style={styles.list}>
-            {matches.map((m) => (
-              <RecipeRow key={m.recipe.id} recipe={m.recipe} match={m} />
-            ))}
-          </View>
+          <>
+            {[
+              {
+                title: 'Prêt à cuisiner',
+                hint: 'Tu as tout ce qu’il faut',
+                items: matches.filter((m) => !m.missing.length),
+              },
+              {
+                title: 'Il manque peu de choses',
+                hint: 'Un passage à l’épicerie suffit',
+                items: matches.filter((m) => m.missing.length),
+              },
+            ]
+              .filter((g) => g.items.length)
+              .map((g) => (
+                <View key={g.title} style={styles.list}>
+                  <View style={styles.groupHead}>
+                    <Text style={styles.groupTitle}>{g.title}</Text>
+                    <Text style={styles.groupCount}>{g.items.length}</Text>
+                  </View>
+                  {g.items.map((m) => (
+                    <RecipeRow key={m.recipe.id} recipe={m.recipe} match={m} />
+                  ))}
+                </View>
+              ))}
+          </>
         )}
       </View>
 
@@ -211,6 +233,7 @@ function MoreIdeas({ fridge }: { fridge: string[] }) {
   const [meals, setMeals] = useState<MealCard[] | null>(null);
   const [failed, setFailed] = useState(false);
   const term = main?.en?.[0];
+  const titleOf = useTranslatedTitles(meals);
 
   useEffect(() => {
     if (!term) return;
@@ -230,10 +253,10 @@ function MoreIdeas({ fridge }: { fridge: string[] }) {
   return (
     <View style={styles.block}>
       <SectionTitle title={`Plus d’idées avec : ${main.name.toLowerCase()}`} />
-      <Txt variant="small">Recettes du monde entier (TheMealDB, en anglais)</Txt>
+      <Txt variant="small">Recettes du monde entier (TheMealDB)</Txt>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {meals.map((m) => (
-          <MealTile key={m.id} {...m} width={150} />
+          <MealTile key={m.id} {...m} title={titleOf(m.id, m.title)} width={150} />
         ))}
       </ScrollView>
     </View>
@@ -274,4 +297,16 @@ const styles = StyleSheet.create({
   toggleAll: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
   filters: { gap: 8, paddingRight: 20 },
   list: { gap: 10 },
+  groupHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  groupTitle: { fontFamily: fonts.bold, color: colors.text, fontSize: 15 },
+  groupCount: {
+    fontFamily: fonts.bold,
+    color: colors.accent,
+    backgroundColor: colors.accentSoft,
+    fontSize: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
 });

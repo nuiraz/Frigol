@@ -35,7 +35,7 @@ export default function TabsLayout() {
         options={{ title: 'Mon frigo', tabBarIcon: icon('box'), tabBarBadge: fridge.length || undefined }}
       />
       <Tabs.Screen name="explorer" options={{ title: 'Explorer', tabBarIcon: icon('compass') }} />
-      <Tabs.Screen name="favoris" options={{ title: 'Favoris', tabBarIcon: icon('heart') }} />
+      <Tabs.Screen name="favoris" options={{ title: 'Mes recettes', tabBarIcon: icon('heart') }} />
     </Tabs>
   );
 }

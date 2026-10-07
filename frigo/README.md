@@ -15,7 +15,10 @@ npm run build:web     # met à jour la version web (../app, publiée par GitHub 
 
 - **Accueil** : ingrédients du quotidien en un clic, « Avec ce que tu as », idée du jour, recettes prêtes en 15 min, favoris et historique.
 - **Mon frigo (anti-gaspi)** : saisie avec suggestions (« tom » → Tomates) ou cases à cocher par rayon ; les recettes se trient instantanément avec le **nombre d’ingrédients manquants** (« Tout est là », « Il manque 2 : crème, lardons »). Filtres : manquants max, ≤ 20 min. Sel, poivre, huile et eau sont considérés comme toujours disponibles ; certains ingrédients se remplacent (tomates fraîches ↔ en boîte, fromage râpé ↔ parmesan).
-- **Explorer** : recherche et catégories **TheMealDB** (API gratuite, recettes en anglais) + « Surprends-moi ».
+- **Explorer** : recherche et catégories **TheMealDB** (API gratuite) + « Surprends-moi ». Une recherche en français (« poulet ») est traduite automatiquement pour interroger TheMealDB.
+- **Traduction en français** des recettes TheMealDB : bouton « Traduire » sur la fiche (titre, étapes, ingrédients, unités), option « Toujours traduire » (titres traduits dans les listes aussi). Traductions gardées en mémoire sur l’appareil. Service gratuit sans clé (Google Translate public, MyMemory en secours).
+- **Liste de courses** : un bouton ajoute les ingrédients manquants d’une recette ; on coche en magasin.
+- **Par envie** : les catégories (pâtes, œufs, soupes…) depuis l’accueil, triées selon le frigo.
 - **Fiche recette** : ingrédients à cocher, ceux déjà dans le frigo signalés, quantités ajustables au nombre de personnes, étapes numérotées, favori.
 - **Mode cuisine pas à pas** : grand texte, écran qui reste allumé, minuteur détecté dans l’étape (« 10 min »), liste des ingrédients à portée de main.
 - **Stockage local** (AsyncStorage) : favoris (consultables hors ligne), historique, contenu du frigo.
@@ -40,6 +43,7 @@ frigo/src
 │   ├── (tabs)/frigo.tsx      Recherche par ingrédients (anti-gaspi)
 │   ├── (tabs)/explorer.tsx   TheMealDB : recherche, catégories, aléatoire
 │   ├── (tabs)/favoris.tsx    Favoris et historique
+│   ├── categorie/[name].tsx  Recettes d’une catégorie
 │   ├── recette/[id].tsx      Fiche recette
 │   └── cuisine/[id].tsx      Mode pas à pas
 ├── components/
@@ -52,7 +56,9 @@ frigo/src
     ├── matching.ts           Calcul des manquants, classement, suggestions de saisie
     ├── mealdb.ts             Client TheMealDB → format Recipe
     ├── recipes.ts            Chargement d’une recette (locale, cache, API) + mise à l’échelle des quantités
-    ├── storage.tsx           Favoris, historique, frigo (AsyncStorage)
+    ├── storage.tsx           Favoris, historique, frigo, courses, traductions (AsyncStorage)
+    ├── translate.ts          Traduction anglais → français (recettes, unités de mesure)
+    ├── use-translation.ts    Affichage traduit d’une recette ou d’une liste de titres
     ├── theme.ts / text.ts    Couleurs, polices, normalisation de texte
     └── types.ts              Ingredient, Recipe…
 ```

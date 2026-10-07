@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Txt } from '@/components/ui';
 import { LOCAL_RECIPES } from '@/data/recipes';
 import { useRecipe } from '@/lib/recipes';
+import { useTranslatedRecipe } from '@/lib/use-translation';
 import { colors, fonts, radius } from '@/lib/theme';
 
 /** Durée en minutes repérée dans le texte d'une étape (« … 10 min »), pour proposer un minuteur. */
@@ -24,7 +25,8 @@ export default function CookingMode() {
   // L'écran reste allumé pendant qu'on cuisine.
   useKeepAwake();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { recipe } = useRecipe(id);
+  const { recipe: source } = useRecipe(id);
+  const recipe = useTranslatedRecipe(source).display;
   const [index, setIndex] = useState(0);
   const [showIngredients, setShowIngredients] = useState(false);
   const [timerEnd, setTimerEnd] = useState<number | null>(null);

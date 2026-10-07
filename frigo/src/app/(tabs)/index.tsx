@@ -5,10 +5,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RecipeCard } from '@/components/recipe-card';
 import { Chip, Icon, Screen, SectionTitle, Txt } from '@/components/ui';
 import { EVERYDAY, INGREDIENT_BY_ID } from '@/data/ingredients';
+import { LOCAL_CATEGORIES } from '@/data/categories';
 import { LOCAL_RECIPES } from '@/data/recipes';
 import { rankRecipes } from '@/lib/matching';
 import { useStorage } from '@/lib/storage';
-import { colors, fonts, radius } from '@/lib/theme';
+import { colors, fonts, radius, tint } from '@/lib/theme';
 import type { Recipe } from '@/lib/types';
 
 function greeting() {
@@ -97,6 +98,24 @@ export default function Home() {
       </Pressable>
 
       <View style={styles.block}>
+        <SectionTitle title="Par envie" />
+        <View style={styles.categories}>
+          {LOCAL_CATEGORIES.map((c) => (
+            <Pressable
+              key={c.name}
+              onPress={() => router.push({ pathname: '/categorie/[name]', params: { name: c.name } })}
+              style={({ pressed }) => [styles.category, { backgroundColor: tint(c.name) }, pressed && styles.pressed]}>
+              <Text style={styles.categoryEmoji}>{c.emoji}</Text>
+              <Text style={styles.categoryName} numberOfLines={1}>
+                {c.name}
+              </Text>
+              <Text style={styles.categoryCount}>{c.count} recettes</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.block}>
         <SectionTitle title="Prêt en 15 minutes" />
         <Carousel>
           {quick.map((r) => (
@@ -161,4 +180,9 @@ const styles = StyleSheet.create({
   todayTitle: { fontFamily: fonts.title, color: '#fff', fontSize: 22, lineHeight: 28 },
   todayMeta: { fontFamily: fonts.regular, color: '#E2F1E7', fontSize: 14, lineHeight: 19 },
   todayEmoji: { fontSize: 54 },
+  categories: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  category: { flexGrow: 1, flexBasis: '30%', minWidth: 96, borderRadius: radius.md, padding: 12, gap: 2 },
+  categoryEmoji: { fontSize: 28, marginBottom: 4 },
+  categoryName: { fontFamily: fonts.bold, color: colors.text, fontSize: 14 },
+  categoryCount: { fontFamily: fonts.regular, color: colors.muted, fontSize: 12 },
 });
