@@ -1,35 +1,7 @@
-# 🧩 Casse-Tête & Énigmes
+# 🥕 Frigo Malin
 
-Jeu en ligne de casse-tête en français : énigmes, logique, suites logiques et calcul mental, avec 3 niveaux de difficulté et un test de QI.
+Application mobile (iOS, Android et web) pour cuisiner vite avec ce qu’on a dans le frigo.
 
-## 🎮 Jouer
+👉 **Version web : https://nuiraz.github.io/jeuxenigme/app/**
 
-👉 **https://nuiraz.github.io/jeuxenigme/**
-
-## Fonctionnalités
-
-- **4 catégories** : 🔮 Énigmes, 🧠 Logique, 🔢 Suites, ➗ Calcul mental (ou 🎲 Mélange)
-- **3 niveaux** : 🟢 Facile (30 s), 🟠 Moyen (45 s), 🔴 Difficile (60 s)
-- **Test de QI** : 20 questions de difficulté croissante, chronométrées, avec un QI estimé (pour le fun)
-- Points bonus pour la rapidité et les séries de bonnes réponses 🔥
-- Joker 50/50, explication après chaque réponse, récapitulatif final
-- Meilleurs scores sauvegardés dans le navigateur
-- Jouable au clavier (touches 1 à 4) et sur mobile
-
-## Ajouter des questions
-
-Toutes les questions sont dans `questions.js`. Format :
-
-```js
-{ q: "La question", c: ["Bonne réponse", "Fausse 1", "Fausse 2", "Fausse 3"], e: "Explication" }
-```
-
-La bonne réponse est toujours la première : les choix sont mélangés automatiquement pendant le jeu.
-
-## Lancer en local
-
-Ouvre simplement `index.html` dans ton navigateur — aucune installation nécessaire.
-
-## 🎧 Blind Test (application Expo)
-
-Le dossier [`blindtest/`](blindtest/) contient une application mobile de blind test (Expo / React Native) alimentée par des playlists YouTube Music, avec page d’administration. 👉 **Jouer : https://nuiraz.github.io/jeuxenigme/app/** — détails dans [blindtest/README.md](blindtest/README.md).
+Le code de l’application est dans [`frigo/`](frigo/) — voir [frigo/README.md](frigo/README.md).
