@@ -12,10 +12,10 @@ export const WEB_URL = 'https://nuiraz.github.io/Frigol/app/';
 export const PREMIUM = {
   price: '3,99 €',
   period: 'mois',
-  lifetimePrice: '10,99 €',
+  lifetimePrice: '59,99 €',
   paypal: 'noozoaa',
   monthlyAmount: '3.99',
-  lifetimeAmount: '10.99',
+  lifetimeAmount: '59.99',
 };
 
 export const paypalLink = (amount: string) => `https://paypal.me/${PREMIUM.paypal}/${amount}EUR`;

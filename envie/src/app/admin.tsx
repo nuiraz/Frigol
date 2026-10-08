@@ -141,7 +141,7 @@ function PremiumAdmin() {
       <Card>
         <Text style={text.strong}>Activer le Premium d’un membre</Text>
         <Text style={text.muted}>
-          Après un paiement PayPal (le pseudo est dans le message) : « + 1 mois » pour 3,99 €, « À vie » pour 10,99 €. Toi, tu l’as gratuitement et à vie.
+          Après un paiement PayPal (le pseudo est dans le message) : « + 1 mois » pour 3,99 €, « À vie » pour 59,99 €. Toi, tu l’as gratuitement et à vie.
         </Text>
         <Input value={username} onChangeText={setUsername} placeholder="Pseudo du membre" autoCapitalize="none" />
         <Row>

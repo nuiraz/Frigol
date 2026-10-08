@@ -53,7 +53,7 @@ export default function ProfileTab() {
                 </View>
               </Card>
             ) : (
-              <PremiumLock title="Passe à Envie Premium" text="3,99 €/mois ou 10,99 € à vie : 5 idées d’un coup, filtres avancés, collections illimitées, ton bilan…" />
+              <PremiumLock title="Passe à Envie Premium" text="3,99 €/mois ou 59,99 € à vie : 5 idées d’un coup, filtres avancés, collections illimitées, ton bilan…" />
             )}
             <Menu>
               <MenuLink href="/bilan" icon="bar-chart-2" label="Mon bilan" />

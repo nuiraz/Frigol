@@ -9,7 +9,7 @@ Application mobile (iOS, Android) et web : tu dis ce dont tu as envie, elle te t
 - **Mentions légales**, CGU et confidentialité.
 - **Top** : podium et classements par univers, tendances de la semaine, membres les plus actifs.
 - **Collections** : listes perso (« Films à voir avec Julie »…), publiques ou privées, partageables.
-- **Premium (3,99 €/mois ou 10,99 € à vie, gratuit pour `nuiraz`)** : 5 idées d’un coup, filtres avancés (décennie, note 7+), collections illimitées (3 en gratuit), « Mon bilan » (statistiques), journal privé, export de liste, badge ✨.
+- **Premium (3,99 €/mois ou 59,99 € à vie, gratuit pour `nuiraz`)** : 5 idées d’un coup, filtres avancés (décennie, note 7+), collections illimitées (3 en gratuit), « Mon bilan » (statistiques), journal privé, export de liste, badge ✨.
 - **Admin** (compte `nuiraz`) : signalements, Premium des membres, ajout et retrait de titres, statistiques.
 
 Site : https://nuiraz.github.io/Frigol/app/
@@ -25,12 +25,12 @@ Site : https://nuiraz.github.io/Frigol/app/
 
 ## Encaisser le Premium (PayPal)
 
-Deux offres : **3,99 € / mois** ou **10,99 € à vie** (une seule fois), payées sur **paypal.me/noozoaa**.
+Deux offres : **3,99 € / mois** ou **59,99 € à vie** (une seule fois), payées sur **paypal.me/noozoaa**.
 
 1. Le membre choisit son offre sur la page Premium et paie via PayPal, en écrivant **son pseudo** dans le message.
 2. À réception, va dans **Administration → Premium**, tape le pseudo, puis :
    - « + 1 mois » pour un paiement de 3,99 € ;
-   - « À vie » pour un paiement de 10,99 €.
+   - « À vie » pour un paiement de 59,99 €.
 
 Le mensuel n’est pas prélevé automatiquement (PayPal.me ne fait pas d’abonnement) : le membre repaie chaque mois. Le pseudo PayPal se change dans `src/lib/config.ts` (`PREMIUM.paypal`).
 
