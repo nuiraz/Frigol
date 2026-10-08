@@ -14,12 +14,27 @@ import {
   ScorePill,
   TypeBadge,
 } from '@/components/media';
-import { Button, Card, Empty, Input, Row, SectionTitle, text } from '@/components/ui';
+import { PremiumLock } from '@/components/premium';
+import { Backdrop } from '@/components/shelf';
+import { Button, Card, Chip, Empty, Input, Row, SectionTitle, text } from '@/components/ui';
 import { useArtwork } from '@/lib/artwork';
 import { useAuth } from '@/lib/auth';
 import { useCatalog } from '@/lib/catalog';
 import { confirm } from '@/lib/confirm';
-import { deleteReview, getScores, listReviews, saveReview, type Review, type Score } from '@/lib/db';
+import {
+  createCollection,
+  deleteReview,
+  getJournal,
+  getScores,
+  listReviews,
+  myCollections,
+  saveJournal,
+  saveReview,
+  setInCollection,
+  type Collection,
+  type Review,
+  type Score,
+} from '@/lib/db';
 import { similar } from '@/lib/discover';
 import { useLists } from '@/lib/lists';
 import { MOOD, TYPE } from '@/lib/taxonomy';
@@ -86,8 +101,11 @@ export default function TitlePage() {
   return (
     <ScrollView ref={scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: item.title }} />
+      <Backdrop item={item} height={560} />
       <Header item={item} score={score} />
       <ListButtons item={item} />
+      <CollectionPicker item={item} />
+      <JournalCard item={item} />
       <View onLayout={(e) => (formY.current = e.nativeEvent.layout.y)}>
         <ReviewForm
           item={item}
@@ -291,6 +309,134 @@ function ReviewForm({
         <Button label={mine ? 'Modifier mon avis' : 'Publier sur le hub'} icon="send" onPress={publish} loading={busy} style={{ flex: 1 }} />
         {mine && <Button label="" icon="trash-2" variant="secondary" onPress={remove} />}
       </View>
+    </Card>
+  );
+}
+
+function CollectionPicker({ item }: { item: Item }) {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+  const [open, setOpen] = useState(false);
+  const [list, setList] = useState<Collection[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    if (!userId) return;
+    setList(await myCollections(userId).catch(() => []));
+  }
+
+  if (!userId) return null;
+
+  async function toggle(c: Collection, on: boolean) {
+    setError(null);
+    try {
+      await setInCollection(c.id, item.id, on);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Action impossible.');
+    }
+  }
+
+  return (
+    <View style={{ gap: 10 }}>
+      <Button
+        label={open ? 'Fermer les collections' : 'Ajouter à une collection'}
+        icon="folder-plus"
+        variant="secondary"
+        small
+        onPress={() => {
+          setOpen(!open);
+          if (!open) load();
+        }}
+      />
+      {open && (
+        <Card>
+          {list === null ? (
+            <ActivityIndicator color={colors.accent} />
+          ) : (
+            <Row>
+              {list.map((c) => {
+                const on = !!c.collection_items?.some((x) => x.item_id === item.id);
+                return <Chip key={c.id} label={c.name} leading={c.emoji} selected={on} onPress={() => toggle(c, !on)} />;
+              })}
+              <Chip
+                label="Nouvelle collection"
+                leading="➕"
+                onPress={async () => {
+                  try {
+                    const id = await createCollection(`Mes ${TYPE[item.type].plural.toLowerCase()}`, TYPE[item.type].emoji);
+                    await setInCollection(id, item.id, true);
+                    await load();
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : 'Création impossible.');
+                  }
+                }}
+              />
+            </Row>
+          )}
+          {error && <Text style={{ color: colors.bad, fontFamily: fonts.medium }}>{error}</Text>}
+        </Card>
+      )}
+    </View>
+  );
+}
+
+/** Journal privé (Premium) : quand tu l'as vu / joué / écouté, et tes notes perso. */
+function JournalCard({ item }: { item: Item }) {
+  const { session, premium } = useAuth();
+  const { setStatus } = useLists();
+  const [note, setNote] = useState('');
+  const [date, setDate] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const userId = session?.user.id;
+
+  useEffect(() => {
+    if (!userId || !premium) return;
+    let alive = true;
+    getJournal(item.id)
+      .then((j) => {
+        if (!alive || !j) return;
+        setNote(j.private_note ?? '');
+        setDate(j.done_at ?? '');
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [userId, premium, item.id]);
+
+  if (!userId) return null;
+  if (!premium) return <PremiumLock compact title="Journal privé" text="Note la date et tes impressions perso, visibles par toi seul." />;
+
+  async function save() {
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return setMsg({ ok: false, text: 'Date au format AAAA-MM-JJ.' });
+    setBusy(true);
+    try {
+      await saveJournal(item.id, note, date || null);
+      setStatus(item.id, 'done');
+      setMsg({ ok: true, text: 'Journal enregistré ✓' });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'Enregistrement impossible.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card style={{ borderColor: '#F59E0B55' }}>
+      <Text style={text.strong}>📔 Mon journal privé</Text>
+      <Input value={date} onChangeText={setDate} placeholder={`${TYPE[item.type].done} le… (AAAA-MM-JJ)`} maxLength={10} />
+      <Input value={note} onChangeText={setNote} placeholder="Mes notes perso (visibles par moi seul)…" multiline maxLength={1000} style={{ minHeight: 70, textAlignVertical: 'top' }} />
+      <Button
+        label="Aujourd’hui"
+        small
+        variant="ghost"
+        onPress={() => setDate(new Date().toISOString().slice(0, 10))}
+        style={{ alignSelf: 'flex-start' }}
+      />
+      {msg && <Text style={{ color: msg.ok ? colors.good : colors.bad, fontFamily: fonts.medium }}>{msg.text}</Text>}
+      <Button label="Enregistrer" icon="save" small onPress={save} loading={busy} />
     </Card>
   );
 }

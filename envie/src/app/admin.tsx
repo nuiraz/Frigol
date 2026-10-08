@@ -5,15 +5,26 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { Field, Message } from '@/components/form';
 import { ReviewCard } from '@/components/media';
 import { Button, Card, Chip, Empty, Input, Row, text } from '@/components/ui';
-import { useAuth } from '@/lib/auth';
+import { useAuth, type Profile } from '@/lib/auth';
 import { useCatalog } from '@/lib/catalog';
 import { confirm } from '@/lib/confirm';
-import { addItem, communityStats, deleteItem, deleteReview, dismissReport, fetchAddedItems, listReports, type Report } from '@/lib/db';
+import {
+  addItem,
+  adminSetPremium,
+  communityStats,
+  deleteItem,
+  deleteReview,
+  dismissReport,
+  fetchAddedItems,
+  listReports,
+  premiumMembers,
+  type Report,
+} from '@/lib/db';
 import { GENRES, MOODS, PLATFORMS, TYPES } from '@/lib/taxonomy';
 import { colors, fonts, radius } from '@/lib/theme';
 import type { Item, MediaType } from '@/lib/types';
 
-type Tab = 'reports' | 'add' | 'items';
+type Tab = 'reports' | 'premium' | 'add' | 'items';
 
 export default function Admin() {
   const { ready, profile } = useAuth();
@@ -50,8 +61,9 @@ export default function Admin() {
         {(
           [
             ['reports', 'Signalements'],
-            ['add', 'Ajouter un titre'],
-            ['items', 'Titres ajoutés'],
+            ['premium', 'Premium'],
+            ['add', 'Ajouter'],
+            ['items', 'Ajoutés'],
           ] as const
         ).map(([k, l]) => (
           <Text key={k} onPress={() => setTab(k)} style={[styles.tab, tab === k && styles.tabOn]}>
@@ -60,6 +72,7 @@ export default function Admin() {
         ))}
       </View>
       {tab === 'reports' && <Reports />}
+      {tab === 'premium' && <PremiumAdmin />}
       {tab === 'add' && <AddItem onDone={() => setTab('items')} />}
       {tab === 'items' && <AddedItems />}
     </ScrollView>
@@ -92,6 +105,59 @@ function Reports() {
             />
             <Button label="Ignorer" small variant="secondary" onPress={async () => (await dismissReport(r.id).catch(() => {}), load())} />
           </Row>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function PremiumAdmin() {
+  const [username, setUsername] = useState('');
+  const [members, setMembers] = useState<Profile[] | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const load = useCallback(() => {
+    premiumMembers()
+      .then(setMembers)
+      .catch(() => setMembers([]));
+  }, []);
+  useEffect(load, [load]);
+
+  async function grant(name: string, months: number) {
+    setMsg(null);
+    try {
+      const until = await adminSetPremium(name, months);
+      setMsg({
+        ok: true,
+        text: months > 0 ? `✨ ${name} est Premium jusqu’au ${new Date(until ?? '').toLocaleDateString('fr-FR')}` : `Premium retiré à ${name}.`,
+      });
+      load();
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'Action impossible.' });
+    }
+  }
+
+  return (
+    <View style={{ gap: 14 }}>
+      <Card>
+        <Text style={text.strong}>Activer le Premium d’un membre</Text>
+        <Text style={text.muted}>Après un paiement Stripe (ou pour offrir le Premium). Toi, tu l’as gratuitement et à vie.</Text>
+        <Input value={username} onChangeText={setUsername} placeholder="Pseudo du membre" autoCapitalize="none" />
+        <Row>
+          <Button label="+ 1 mois" small disabled={!username.trim()} onPress={() => grant(username, 1)} />
+          <Button label="+ 12 mois" small variant="secondary" disabled={!username.trim()} onPress={() => grant(username, 12)} />
+          <Button label="Retirer" small variant="ghost" disabled={!username.trim()} onPress={() => grant(username, 0)} />
+        </Row>
+        <Message text={msg?.text ?? null} ok={msg?.ok} />
+      </Card>
+      <Text style={text.h2}>Membres Premium ({members?.length ?? '…'})</Text>
+      {members?.map((m) => (
+        <View key={m.id} style={styles.itemRow}>
+          <Text style={{ fontSize: 22 }}>{m.avatar}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={text.strong}>{m.username}</Text>
+            <Text style={text.small}>jusqu’au {new Date(m.premium_until ?? '').toLocaleDateString('fr-FR')}</Text>
+          </View>
+          <Button label="+1 mois" small variant="secondary" onPress={() => grant(m.username, 1)} />
         </View>
       ))}
     </View>

@@ -4,12 +4,26 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { WEB_URL } from './config';
 import { supabase } from './supabase';
 
-export type Profile = { id: string; username: string; avatar: string; bio: string; is_admin: boolean; created_at: string };
+export type Profile = {
+  id: string;
+  username: string;
+  avatar: string;
+  bio: string;
+  is_admin: boolean;
+  created_at: string;
+  premium_until?: string | null;
+};
+
+/** Premium : abonnement en cours, ou administrateur (gratuit pour nuiraz). */
+export const isPremium = (p: Pick<Profile, 'is_admin' | 'premium_until'> | null | undefined) =>
+  !!p && (p.is_admin || (!!p.premium_until && new Date(p.premium_until) > new Date()));
 
 type Auth = {
   ready: boolean;
   session: Session | null;
   profile: Profile | null;
+  premium: boolean;
+  refreshProfile: () => Promise<void>;
   /** Vrai quand on arrive depuis le lien « mot de passe oublié ». */
   recovering: boolean;
   signUp: (email: string, password: string, username: string) => Promise<{ needsConfirmation: boolean }>;
@@ -75,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       session,
       profile,
+      premium: isPremium(profile),
+      refreshProfile: () => loadProfile(session?.user.id),
       recovering,
       async signUp(email, password, username) {
         const name = username.trim();

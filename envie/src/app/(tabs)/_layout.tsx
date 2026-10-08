@@ -31,6 +31,7 @@ export default function TabsLayout() {
         tabBarBadgeStyle: { backgroundColor: colors.accent, fontFamily: fonts.bold, fontSize: 10 },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Découvrir', tabBarIcon: icon('zap') }} />
+      <Tabs.Screen name="top" options={{ title: 'Top', tabBarIcon: icon('award') }} />
       <Tabs.Screen name="hub" options={{ title: 'Hub', tabBarIcon: icon('message-square') }} />
       <Tabs.Screen name="liste" options={{ title: 'Ma liste', tabBarIcon: icon('bookmark'), tabBarBadge: todo || undefined }} />
       <Tabs.Screen name="profil" options={{ title: 'Profil', tabBarIcon: icon('user') }} />

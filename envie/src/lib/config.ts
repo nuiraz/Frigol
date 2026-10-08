@@ -5,6 +5,16 @@ export const APP_NAME = 'Envie';
 /** Adresse publique du site : utilisée pour les liens des e-mails (confirmation, mot de passe). */
 export const WEB_URL = 'https://nuiraz.github.io/Frigol/app/';
 
+export const PREMIUM = {
+  price: '3,99 €',
+  period: 'mois',
+  /**
+   * Lien de paiement Stripe (Stripe → Liens de paiement → abonnement à 3,99 €/mois).
+   * Tant qu'il est vide, le bouton propose de contacter l'admin, qui active le Premium à la main.
+   */
+  paymentLink: '',
+};
+
 export const LEGAL = {
   editor: 'Nuiraz',
   contactEmail: 'contact@exemple.fr',

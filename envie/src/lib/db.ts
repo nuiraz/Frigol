@@ -2,7 +2,7 @@ import type { Profile } from './auth';
 import { supabase } from './supabase';
 import type { Item, MediaType } from './types';
 
-export type Author = Pick<Profile, 'id' | 'username' | 'avatar' | 'is_admin'>;
+export type Author = Pick<Profile, 'id' | 'username' | 'avatar' | 'is_admin' | 'premium_until'>;
 
 export type Review = {
   id: string;
@@ -26,7 +26,7 @@ export type Score = { item_id: string; average: number; reviews: number };
 
 // « !user_id » : les likes, commentaires et signalements relient aussi avis et profils,
 // on précise donc que l'auteur est celui de la colonne user_id.
-const REVIEW = '*,profiles!user_id(id,username,avatar,is_admin)';
+const REVIEW = '*,profiles!user_id(id,username,avatar,is_admin,premium_until)';
 
 /** Explique les erreurs de base les plus courantes (script SQL pas lancé, droits manquants…). */
 export function dbError(e: { message?: string; code?: string; hint?: string | null } | null | undefined): string {
@@ -241,4 +241,97 @@ export async function upsertSaved(rows: Saved[]) {
 
 export async function removeSaved(itemId: string) {
   check(await supabase.from('saved_items').delete().eq('item_id', itemId));
+}
+
+// ------------------------------------------------------------------ Classements
+
+/** Titres les plus notés (nombre d'avis). */
+export async function mostReviewed(limit = 30): Promise<Score[]> {
+  return check(await supabase.from('item_scores').select('*').order('reviews', { ascending: false }).limit(limit)) as Score[];
+}
+
+/** Notes du membre : item_id → note. */
+export async function myRatings(userId: string): Promise<Map<string, number>> {
+  const rows = check(await supabase.from('reviews').select('item_id,rating').eq('user_id', userId).limit(2000)) as {
+    item_id: string;
+    rating: number;
+  }[];
+  return new Map(rows.map((r) => [r.item_id, r.rating]));
+}
+
+// ------------------------------------------------------------------ Collections
+
+export type Collection = {
+  id: string;
+  user_id: string;
+  name: string;
+  emoji: string;
+  is_public: boolean;
+  created_at: string;
+  collection_items?: { item_id: string; added_at: string }[];
+  profiles?: Author | null;
+};
+
+const COLLECTION = '*,collection_items(item_id,added_at),profiles!user_id(id,username,avatar,is_admin,premium_until)';
+
+export async function myCollections(userId: string): Promise<Collection[]> {
+  return check(
+    await supabase.from('collections').select(COLLECTION).eq('user_id', userId).order('created_at', { ascending: false }),
+  ) as Collection[];
+}
+
+export async function getCollection(id: string): Promise<Collection | null> {
+  return check(await supabase.from('collections').select(COLLECTION).eq('id', id).maybeSingle()) as Collection | null;
+}
+
+export async function createCollection(name: string, emoji: string) {
+  const row = check(await supabase.from('collections').insert({ name: name.trim(), emoji }).select('id').single());
+  return (row as { id: string }).id;
+}
+
+export async function updateCollection(id: string, changes: Partial<Pick<Collection, 'name' | 'emoji' | 'is_public'>>) {
+  check(await supabase.from('collections').update(changes).eq('id', id));
+}
+
+export async function deleteCollection(id: string) {
+  check(await supabase.from('collections').delete().eq('id', id));
+}
+
+export async function setInCollection(collectionId: string, itemId: string, on: boolean) {
+  if (on) {
+    const res = await supabase.from('collection_items').insert({ collection_id: collectionId, item_id: itemId });
+    if (res.error && !res.error.message.includes('duplicate')) throw new Error(dbError(res.error));
+  } else {
+    check(await supabase.from('collection_items').delete().eq('collection_id', collectionId).eq('item_id', itemId));
+  }
+}
+
+// ------------------------------------------------------------------ Journal privé (Premium)
+
+export type Journal = { private_note: string | null; done_at: string | null; status: 'todo' | 'done' };
+
+export async function getJournal(itemId: string): Promise<Journal | null> {
+  return check(await supabase.from('saved_items').select('private_note,done_at,status').eq('item_id', itemId).maybeSingle()) as Journal | null;
+}
+
+export async function saveJournal(itemId: string, note: string, doneAt: string | null) {
+  check(
+    await supabase
+      .from('saved_items')
+      .upsert({ item_id: itemId, status: 'done', private_note: note.trim() || null, done_at: doneAt || null }),
+  );
+}
+
+// ------------------------------------------------------------------ Premium (admin)
+
+export async function adminSetPremium(username: string, months: number): Promise<string | null> {
+  const res = await supabase.rpc('admin_set_premium', { p_username: username, p_months: months });
+  if (res.error) throw new Error(dbError(res.error));
+  return res.data as string | null;
+}
+
+export async function premiumMembers(): Promise<Profile[]> {
+  return check(
+    await supabase.from('profiles').select('*').gt('premium_until', new Date().toISOString()).order('premium_until'),
+  ) as Profile[];
 }

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import type { Profile } from '@/lib/auth';
+import { isPremium, type Profile } from '@/lib/auth';
 import { listReviews, type Review } from '@/lib/db';
 import { TYPES } from '@/lib/taxonomy';
 import { colors, fonts, radius } from '@/lib/theme';
 import { useLikes } from '@/lib/use-likes';
 
 import { Avatar, ReviewCard } from './media';
+import { PremiumBadge } from './premium';
 import { Empty, SectionTitle, text } from './ui';
 
 export function ProfileHeader({ profile, reviews }: { profile: Profile; reviews: Review[] }) {
@@ -18,10 +19,13 @@ export function ProfileHeader({ profile, reviews }: { profile: Profile; reviews:
       <View style={styles.head}>
         <Avatar value={profile.avatar} size={72} />
         <View style={{ flex: 1, gap: 3 }}>
-          <Text style={styles.name}>
-            {profile.username}
-            {profile.is_admin ? '  🛡️' : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <Text style={styles.name}>
+              {profile.username}
+              {profile.is_admin ? '  🛡️' : ''}
+            </Text>
+            {isPremium(profile) && <PremiumBadge small />}
+          </View>
           {!!profile.bio && <Text style={text.muted}>{profile.bio}</Text>}
           <Text style={text.small}>Membre depuis {since}</Text>
         </View>

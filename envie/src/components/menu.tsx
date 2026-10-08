@@ -27,6 +27,7 @@ export function LegalLinks() {
     <Menu>
       <MenuLink href="/legal/mentions" icon="info" label="Mentions légales" />
       <MenuLink href="/legal/cgu" icon="file-text" label="Conditions d’utilisation" />
+      <MenuLink href="/legal/cgv" icon="credit-card" label="Conditions de vente (Premium)" />
       <MenuLink href="/legal/confidentialite" icon="shield" label="Confidentialité" />
     </Menu>
   );

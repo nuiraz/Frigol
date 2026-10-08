@@ -5,13 +5,15 @@ import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { steamHeader, useArtwork } from '@/lib/artwork';
+import { steamCover, steamHeader, useArtwork } from '@/lib/artwork';
+import { isPremium } from '@/lib/auth';
 import type { Review } from '@/lib/db';
 import { timeAgo, isUrl } from '@/lib/format';
 import { GENRE, PLATFORM, TYPE } from '@/lib/taxonomy';
 import { colors, fonts, radius, scoreColor } from '@/lib/theme';
 import type { Item, MediaType } from '@/lib/types';
 
+import { PremiumBadge } from './premium';
 import { Icon } from './ui';
 
 export function TypeBadge({ type, small }: { type: MediaType; small?: boolean }) {
@@ -44,10 +46,14 @@ export function Poster({
   style?: StyleProp<ViewStyle>;
   radiusSize?: number;
 }) {
-  const art = useArtwork(image ? null : item);
   const [failed, setFailed] = useState<string[]>([]);
-  // Si la jaquette ne se charge pas, on essaie la bannière Steam, puis on garde le dégradé.
-  const src = [image ?? art.image, item?.steam ? steamHeader(item.steam) : undefined].find((u) => u && !failed.includes(u));
+  const steamFailed = !!item?.steam && failed.includes(steamCover(item.steam));
+  const art = useArtwork(image ? null : item);
+  // Jaquette Steam introuvable : on cherche l'affiche sur Wikipédia, puis on prend la bannière Steam.
+  const deep = useArtwork(steamFailed && !image ? item : null, true);
+  const src = [image ?? art.image, deep.image, item?.steam ? steamHeader(item.steam) : undefined].find(
+    (u) => u && !failed.includes(u),
+  );
   const t = TYPE[type ?? item?.type ?? 'film'];
   return (
     <View style={[{ aspectRatio: aspect, borderRadius: radiusSize, overflow: 'hidden', backgroundColor: colors.surfaceAlt }, style]}>
@@ -98,26 +104,34 @@ export function platformsLine(item: Item) {
   return (item.platforms ?? []).map((p) => PLATFORM[p]?.label ?? p).join(' · ');
 }
 
-export function MediaTile({ item, score, width }: { item: Item; score?: number; width?: number }) {
+export function MediaTile({ item, score, myScore, width }: { item: Item; score?: number; myScore?: number; width?: number }) {
+  // La largeur est portée par un conteneur : à travers <Link asChild>, un style calculé serait perdu sur le web.
   return (
-    <Link href={`/titre/${item.id}`} asChild>
-      <Pressable style={({ pressed }) => [styles.tile, width ? { width } : null, pressed && { opacity: 0.8 }]}>
-        <View>
-          <Poster item={item} aspect={item.type === 'musique' ? 1 : 2 / 3} />
-          {score !== undefined && (
-            <View style={styles.tileScore}>
-              <ScorePill score={score} size="sm" />
-            </View>
-          )}
-        </View>
-        <Text style={styles.tileTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={styles.tileMeta} numberOfLines={1}>
-          {item.type === 'musique' ? item.creator : metaLine(item, 2)}
-        </Text>
-      </Pressable>
-    </Link>
+    <View style={width ? { width } : styles.tileFill}>
+      <Link href={`/titre/${item.id}`} asChild>
+        <Pressable style={({ pressed }) => [styles.tile, pressed && { opacity: 0.8 }]}>
+          <View>
+            <Poster item={item} aspect={item.type === 'musique' ? 1 : 2 / 3} />
+            {score !== undefined && (
+              <View style={styles.tileScore}>
+                <ScorePill score={score} size="sm" />
+              </View>
+            )}
+            {myScore !== undefined && (
+              <View style={styles.tileMine}>
+                <Text style={styles.tileMineText}>★ {myScore}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.tileTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <Text style={styles.tileMeta} numberOfLines={1}>
+            {item.type === 'musique' ? item.creator : metaLine(item, 2)}
+          </Text>
+        </Pressable>
+      </Link>
+    </View>
   );
 }
 
@@ -203,10 +217,13 @@ export function ReviewCard({
           <Pressable style={styles.author}>
             <Avatar value={author?.avatar} size={34} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.authorName} numberOfLines={1}>
-                {author?.username ?? 'Membre supprimé'}
-                {author?.is_admin ? '  🛡️' : ''}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.authorName} numberOfLines={1}>
+                  {author?.username ?? 'Membre supprimé'}
+                  {author?.is_admin ? '  🛡️' : ''}
+                </Text>
+                {isPremium(author) && !author?.is_admin && <PremiumBadge small />}
+              </View>
               <Text style={styles.reviewDate}>{timeAgo(review.created_at)}</Text>
             </View>
           </Pressable>
@@ -284,8 +301,11 @@ const styles = StyleSheet.create({
   scoreLg: { paddingHorizontal: 14, paddingVertical: 6 },
   scoreText: { fontFamily: fonts.bold },
   scoreCount: { fontFamily: fonts.medium, color: colors.muted, fontSize: 12 },
-  tile: { gap: 6 },
+  tile: { gap: 6, width: '100%' },
+  tileFill: { width: '100%' },
   tileScore: { position: 'absolute', top: 6, left: 6 },
+  tileMine: { position: 'absolute', bottom: 6, right: 6, backgroundColor: 'rgba(11,11,18,0.85)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  tileMineText: { fontFamily: fonts.bold, color: '#FBBF24', fontSize: 12 },
   tileTitle: { fontFamily: fonts.bold, color: colors.text, fontSize: 14, lineHeight: 18 },
   tileMeta: { fontFamily: fonts.regular, color: colors.muted, fontSize: 12 },
   rating: { flexDirection: 'row', gap: 5 },

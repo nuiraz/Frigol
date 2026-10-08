@@ -85,6 +85,9 @@ export default function RootLayout() {
               <Stack.Screen name="nouveau-mot-de-passe" options={{ title: 'Nouveau mot de passe' }} />
               <Stack.Screen name="parametres" options={{ title: 'Paramètres' }} />
               <Stack.Screen name="admin" options={{ title: 'Administration' }} />
+              <Stack.Screen name="premium" options={{ title: 'Premium' }} />
+              <Stack.Screen name="bilan" options={{ title: 'Mon bilan' }} />
+              <Stack.Screen name="collection/[id]" options={{ title: 'Collection' }} />
               <Stack.Screen name="legal/[page]" options={{ title: 'Informations légales' }} />
             </Stack>
           </ThemeProvider>

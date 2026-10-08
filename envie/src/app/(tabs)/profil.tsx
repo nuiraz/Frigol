@@ -3,13 +3,14 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LegalLinks, Menu, MenuLink } from '@/components/menu';
+import { PremiumBadge, PremiumLock } from '@/components/premium';
 import { ProfileView } from '@/components/profile-view';
 import { Button, Card, text } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { colors } from '@/lib/theme';
 
 export default function ProfileTab() {
-  const { ready, session, profile, signOut } = useAuth();
+  const { ready, session, profile, premium, signOut } = useAuth();
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
@@ -38,7 +39,23 @@ export default function ProfileTab() {
         ) : profile ? (
           <>
             <ProfileView profile={profile} />
+            {premium ? (
+              <Card style={{ borderColor: '#F59E0B55' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <PremiumBadge />
+                  <Text style={text.strong}>
+                    {profile.is_admin
+                      ? 'Offert à vie (admin)'
+                      : `Actif jusqu’au ${new Date(profile.premium_until ?? '').toLocaleDateString('fr-FR')}`}
+                  </Text>
+                </View>
+              </Card>
+            ) : (
+              <PremiumLock title="Passe à Envie Premium" text="5 idées d’un coup, filtres avancés, collections illimitées, ton bilan perso…" />
+            )}
             <Menu>
+              <MenuLink href="/bilan" icon="bar-chart-2" label="Mon bilan" />
+              <MenuLink href="/premium" icon="star" label="Envie Premium" />
               <MenuLink href="/parametres" icon="settings" label="Paramètres du compte" />
               {profile.is_admin && <MenuLink href="/admin" icon="shield" label="Administration" />}
             </Menu>

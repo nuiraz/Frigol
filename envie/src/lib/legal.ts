@@ -1,4 +1,4 @@
-import { APP_NAME, LEGAL, WEB_URL } from './config';
+import { APP_NAME, LEGAL, PREMIUM, WEB_URL } from './config';
 
 export type LegalPage = { title: string; sections: { heading: string; body: string }[] };
 
@@ -63,6 +63,32 @@ export const LEGAL_PAGES: Record<string, LegalPage> = {
       { heading: 'Mise à jour', body: `Dernière mise à jour : ${LEGAL.lastUpdate}.` },
     ],
   },
+  cgv: {
+    title: 'Conditions de vente — Premium',
+    sections: [
+      {
+        heading: '1. Offre',
+        body: `${APP_NAME} Premium est un abonnement mensuel à ${PREMIUM.price} TTC par ${PREMIUM.period}, qui débloque : 5 idées d’un coup, filtres avancés, collections illimitées, « Mon bilan », journal privé, export de liste et badge Premium. L’usage de base d’${APP_NAME} reste gratuit.`,
+      },
+      {
+        heading: '2. Paiement',
+        body: 'Le paiement est réalisé par carte bancaire via Stripe, prestataire de paiement sécurisé. Aucune donnée bancaire n’est conservée par Envie. L’abonnement est prélevé à la souscription puis chaque mois à la même date.',
+      },
+      {
+        heading: '3. Durée et résiliation',
+        body: 'L’abonnement est sans engagement : tu peux le résilier à tout moment depuis le lien reçu par e-mail de Stripe ou en écrivant au contact ci-dessous. Il reste actif jusqu’à la fin de la période déjà payée, sans renouvellement.',
+      },
+      {
+        heading: '4. Droit de rétractation',
+        body: 'Conformément au Code de la consommation, tu disposes de 14 jours pour te rétracter. En demandant l’accès immédiat aux fonctions Premium, tu acceptes que le service commence avant la fin de ce délai ; le remboursement est alors calculé au prorata de la période non utilisée.',
+      },
+      {
+        heading: '5. Réclamations et médiation',
+        body: `Pour toute question : ${LEGAL.contactEmail}. En cas de litige, tu peux recourir gratuitement à un médiateur de la consommation ou à la plateforme européenne de règlement des litiges en ligne.`,
+      },
+      { heading: 'Mise à jour', body: `Dernière mise à jour : ${LEGAL.lastUpdate}.` },
+    ],
+  },
   confidentialite: {
     title: 'Politique de confidentialité',
     sections: [
@@ -71,7 +97,8 @@ export const LEGAL_PAGES: Record<string, LegalPage> = {
         body:
           '• Compte : adresse e-mail, mot de passe (chiffré par Supabase, jamais visible), pseudo, avatar et bio.\n' +
           '• Activité : tes avis, notes, commentaires, likes, signalements et ta liste « À faire / Déjà fait ».\n' +
-          '• Sur ton appareil : ta session et ta liste sont enregistrées localement pour fonctionner hors connexion.',
+          '• Sur ton appareil : ta session et ta liste sont enregistrées localement pour fonctionner hors connexion.\n' +
+          '• Premium : la date de fin d’abonnement. Le paiement est géré par Stripe, qui traite tes données bancaires ; Envie ne les reçoit jamais.',
       },
       {
         heading: 'Pourquoi',

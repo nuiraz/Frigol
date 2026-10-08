@@ -96,10 +96,17 @@ create policy "admin gère les titres" on public.items for all using (public.is_
 -- Quand un membre retrouve une jaquette (iTunes, TVmaze), elle sert à tout le monde.
 create table if not exists public.artwork (
   item_id text primary key,
-  image text check (image is null or image ~ '^https://([a-z0-9-]+\.)*(mzstatic\.com|tvmaze\.com)/'),
-  preview text check (preview is null or preview ~ '^https://([a-z0-9-]+\.)*(apple\.com|mzstatic\.com)/'),
+  image text,
+  preview text,
   created_at timestamptz not null default now()
 );
+-- Seules les images des sources connues sont acceptées.
+alter table public.artwork drop constraint if exists artwork_image_check;
+alter table public.artwork add constraint artwork_image_check
+  check (image is null or image ~ '^https://([a-z0-9-]+\.)*(mzstatic\.com|tvmaze\.com|wikimedia\.org)/');
+alter table public.artwork drop constraint if exists artwork_preview_check;
+alter table public.artwork add constraint artwork_preview_check
+  check (preview is null or preview ~ '^https://([a-z0-9-]+\.)*(apple\.com|mzstatic\.com)/');
 alter table public.artwork enable row level security;
 drop policy if exists "jaquettes visibles" on public.artwork;
 create policy "jaquettes visibles" on public.artwork for select using (true);
@@ -222,6 +229,100 @@ alter table public.saved_items enable row level security;
 drop policy if exists "ma liste" on public.saved_items;
 create policy "ma liste" on public.saved_items for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+-- ---------------------------------------------------------------- Premium (3,99 €/mois, gratuit pour l'admin)
+-- La date de fin d'abonnement n'est modifiable que par l'admin (ou le webhook Stripe), jamais par le membre.
+alter table public.profiles add column if not exists premium_until timestamptz;
+
+create or replace function public.is_premium(p_user uuid default auth.uid()) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select is_admin or coalesce(premium_until > now(), false) from public.profiles where id = p_user), false);
+$$;
+grant execute on function public.is_premium(uuid) to anon, authenticated;
+
+-- L'admin offre ou retire le Premium : p_months = 0 pour le retirer.
+create or replace function public.admin_set_premium(p_username text, p_months int) returns timestamptz
+language plpgsql security definer set search_path = public as $$
+declare result timestamptz;
+begin
+  if not public.is_admin() then raise exception 'Réservé à l''administrateur'; end if;
+  update public.profiles
+     set premium_until = case when p_months <= 0 then null
+                              else greatest(coalesce(premium_until, now()), now()) + make_interval(months => p_months) end
+   where lower(username) = lower(trim(p_username))
+  returning premium_until into result;
+  if not found then raise exception 'Membre introuvable : %', p_username; end if;
+  return result;
+end $$;
+grant execute on function public.admin_set_premium(text, int) to authenticated;
+
+-- Appelée uniquement par le webhook Stripe (clé service), jamais par l'app.
+create or replace function public.premium_from_stripe(p_email text, p_until timestamptz) returns void
+language sql security definer set search_path = public as $$
+  update public.profiles p set premium_until = greatest(coalesce(p.premium_until, now()), p_until)
+  from auth.users u where u.id = p.id and lower(u.email) = lower(trim(p_email));
+$$;
+revoke execute on function public.premium_from_stripe(text, timestamptz) from public, anon, authenticated;
+grant execute on function public.premium_from_stripe(text, timestamptz) to service_role;
+
+-- ---------------------------------------------------------------- Collections (listes personnalisées)
+create table if not exists public.collections (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 60),
+  emoji text not null default '📁' check (char_length(emoji) <= 8),
+  is_public boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.collection_items (
+  collection_id uuid not null references public.collections (id) on delete cascade,
+  item_id text not null,
+  added_at timestamptz not null default now(),
+  primary key (collection_id, item_id)
+);
+alter table public.collections enable row level security;
+alter table public.collection_items enable row level security;
+drop policy if exists "collections visibles" on public.collections;
+create policy "collections visibles" on public.collections for select using (is_public or user_id = auth.uid());
+drop policy if exists "mes collections" on public.collections;
+create policy "mes collections" on public.collections for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "contenu visible" on public.collection_items;
+create policy "contenu visible" on public.collection_items for select
+  using (exists (select 1 from public.collections c where c.id = collection_id and (c.is_public or c.user_id = auth.uid())));
+drop policy if exists "je remplis mes collections" on public.collection_items;
+create policy "je remplis mes collections" on public.collection_items for all
+  using (exists (select 1 from public.collections c where c.id = collection_id and c.user_id = auth.uid()))
+  with check (exists (select 1 from public.collections c where c.id = collection_id and c.user_id = auth.uid()));
+
+-- Gratuit : 3 collections. Premium : illimité.
+create or replace function public.check_collection_limit() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_premium(new.user_id)
+     and (select count(*) from public.collections where user_id = new.user_id) >= 3 then
+    raise exception 'Limite de 3 collections atteinte : passe Premium pour en créer autant que tu veux.';
+  end if;
+  return new;
+end $$;
+drop trigger if exists collections_limit on public.collections;
+create trigger collections_limit before insert on public.collections
+  for each row execute function public.check_collection_limit();
+
+-- ---------------------------------------------------------------- Journal privé (Premium)
+alter table public.saved_items add column if not exists private_note text check (char_length(private_note) <= 1000);
+alter table public.saved_items add column if not exists done_at date;
+
+create or replace function public.check_private_note() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(new.private_note, '') <> '' and not public.is_premium(new.user_id) then
+    raise exception 'Le journal privé est réservé aux membres Premium.';
+  end if;
+  return new;
+end $$;
+drop trigger if exists saved_items_note on public.saved_items;
+create trigger saved_items_note before insert or update on public.saved_items
+  for each row execute function public.check_private_note();
+
 -- ---------------------------------------------------------------- Droits d'accès de l'app
 -- Les projets Supabase récents n'ouvrent plus automatiquement les nouvelles tables à l'app :
 -- on donne les droits explicitement (les règles RLS ci-dessus restent appliquées).
@@ -235,6 +336,8 @@ grant delete on public.reviews, public.review_likes, public.review_comments, pub
 grant select on public.review_reports to authenticated;
 grant select, insert, update, delete on public.items, public.saved_items to authenticated;
 grant execute on function public.is_admin() to anon, authenticated;
+grant select, insert, update, delete on public.collections, public.collection_items to authenticated;
+grant select on public.collections, public.collection_items to anon;
 
 -- Recharge le schéma de l'API pour que les nouvelles tables soient visibles tout de suite.
 notify pgrst, 'reload schema';
