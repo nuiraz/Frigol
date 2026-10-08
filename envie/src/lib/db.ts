@@ -24,7 +24,9 @@ export type Review = {
 export type Comment = { id: string; review_id: string; user_id: string; body: string; created_at: string; profiles: Author | null };
 export type Score = { item_id: string; average: number; reviews: number };
 
-const REVIEW = '*,profiles(id,username,avatar,is_admin)';
+// « !user_id » : les likes, commentaires et signalements relient aussi avis et profils,
+// on précise donc que l'auteur est celui de la colonne user_id.
+const REVIEW = '*,profiles!user_id(id,username,avatar,is_admin)';
 
 /** Explique les erreurs de base les plus courantes (script SQL pas lancé, droits manquants…). */
 export function dbError(e: { message?: string; code?: string; hint?: string | null } | null | undefined): string {
