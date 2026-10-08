@@ -36,6 +36,7 @@ export function Poster({
   aspect = 2 / 3,
   style,
   radiusSize = radius.md,
+  priority,
 }: {
   item?: Item | null;
   /** Image connue à l'avance (ex. avis du hub). */
@@ -45,12 +46,14 @@ export function Poster({
   aspect?: number;
   style?: StyleProp<ViewStyle>;
   radiusSize?: number;
+  /** Affiche en grand : cherchée avant les autres. */
+  priority?: boolean;
 }) {
   const [failed, setFailed] = useState<string[]>([]);
   const steamFailed = !!item?.steam && failed.includes(steamCover(item.steam));
-  const art = useArtwork(image ? null : item);
+  const art = useArtwork(image ? null : item, false, priority);
   // Jaquette Steam introuvable : on cherche l'affiche sur Wikipédia, puis on prend la bannière Steam.
-  const deep = useArtwork(steamFailed && !image ? item : null, true);
+  const deep = useArtwork(steamFailed && !image ? item : null, true, priority);
   const src = [image ?? art.image, deep.image, item?.steam ? steamHeader(item.steam) : undefined].find(
     (u) => u && !failed.includes(u),
   );

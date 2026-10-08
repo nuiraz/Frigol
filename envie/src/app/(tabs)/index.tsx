@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MediaTile, metaLine, MusicPreview, platformsLine, Poster, ScorePill, TypeBadge } from '@/components/media';
 import { PremiumBadge, PremiumLock } from '@/components/premium';
 import { Backdrop, Shelf } from '@/components/shelf';
+import { Welcome } from '@/components/welcome';
 import { Button, Chip, Icon, Row, text } from '@/components/ui';
 import { useArtwork } from '@/lib/artwork';
 import { useAuth } from '@/lib/auth';
@@ -245,7 +246,7 @@ export default function Discover() {
         key: t.id,
         title: `${t.emoji} ${t.plural} ${t.verb}`,
         color: t.color,
-        items: shuffled(byType(t.id), seed).slice(0, 14),
+        items: shuffled(byType(t.id), seed).slice(0, 10),
         href: { pathname: '/catalogue', params: { type: t.id } } as const,
       }));
     }
@@ -287,6 +288,8 @@ export default function Discover() {
           <Text style={styles.hero}>Tu as envie de quoi ?</Text>
           <Text style={text.muted}>Choisis un univers, ou écris ton envie comme tu veux : on te trouve une idée.</Text>
         </View>
+
+        <Welcome />
 
         <View style={styles.inputWrap}>
           <Icon name="message-circle" size={18} color={colors.faint} />
@@ -528,6 +531,7 @@ function Result({
       <View style={[styles.resultBody, wide && { flexDirection: 'row' }]}>
         <Poster
           item={item}
+          priority
           aspect={item.type === 'musique' ? 1 : 2 / 3}
           style={[styles.resultPoster, wide ? { width: 220 } : { width: item.type === 'musique' ? '72%' : '64%', alignSelf: 'center' }]}
           radiusSize={radius.lg}

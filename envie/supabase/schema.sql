@@ -111,7 +111,8 @@ alter table public.artwork enable row level security;
 drop policy if exists "jaquettes visibles" on public.artwork;
 create policy "jaquettes visibles" on public.artwork for select using (true);
 drop policy if exists "membres ajoutent une jaquette" on public.artwork;
-create policy "membres ajoutent une jaquette" on public.artwork for insert to authenticated with check (true);
+-- Tout visiteur peut ajouter une jaquette trouvée (sources vérifiées par les contraintes, jamais d'écrasement).
+create policy "membres ajoutent une jaquette" on public.artwork for insert to anon, authenticated with check (true);
 drop policy if exists "admin supprime une jaquette" on public.artwork;
 create policy "admin supprime une jaquette" on public.artwork for delete using (public.is_admin());
 
@@ -329,6 +330,7 @@ create trigger saved_items_note before insert or update on public.saved_items
 grant usage on schema public to anon, authenticated;
 grant select on public.profiles, public.items, public.artwork, public.reviews, public.review_likes,
   public.review_comments, public.item_scores to anon, authenticated;
+grant insert on public.artwork to anon;
 grant insert on public.artwork, public.reviews, public.review_likes, public.review_comments,
   public.review_reports to authenticated;
 grant delete on public.reviews, public.review_likes, public.review_comments, public.review_reports,

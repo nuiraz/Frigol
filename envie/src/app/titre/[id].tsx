@@ -16,6 +16,7 @@ import {
 } from '@/components/media';
 import { PremiumLock } from '@/components/premium';
 import { Backdrop } from '@/components/shelf';
+import { WhereToFind } from '@/components/where';
 import { Button, Card, Chip, Empty, Input, Row, SectionTitle, text } from '@/components/ui';
 import { useArtwork } from '@/lib/artwork';
 import { useAuth } from '@/lib/auth';
@@ -104,6 +105,7 @@ export default function TitlePage() {
       <Backdrop item={item} height={560} />
       <Header item={item} score={score} />
       <ListButtons item={item} />
+      <WhereToFind item={item} />
       <CollectionPicker item={item} />
       <JournalCard item={item} />
       <View onLayout={(e) => (formY.current = e.nativeEvent.layout.y)}>
@@ -137,6 +139,7 @@ function Header({ item, score }: { item: Item; score?: Score }) {
     <View style={[styles.header, wide && { flexDirection: 'row' }]}>
       <Poster
         item={item}
+        priority
         aspect={item.type === 'musique' ? 1 : 2 / 3}
         radiusSize={radius.lg}
         style={wide ? { width: 220 } : { width: item.type === 'musique' ? '72%' : '60%', alignSelf: 'center' }}
