@@ -1,12 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PremiumBadge } from '@/components/premium';
 import { Button, Card, text } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { LEGAL, PREMIUM } from '@/lib/config';
+import { paypalLink, PREMIUM } from '@/lib/config';
 import { colors, fonts, radius } from '@/lib/theme';
 
 const FEATURES: [string, string, string][] = [
@@ -20,19 +21,25 @@ const FEATURES: [string, string, string][] = [
   ['❤️', 'Tu soutiens Envie', 'Pas de pub, pas de revente de données : c’est toi qui fais vivre l’app.'],
 ];
 
+type Plan = 'monthly' | 'lifetime';
+
 export default function Premium() {
   const { session, profile, premium } = useAuth();
+  const [plan, setPlan] = useState<Plan>('lifetime');
+  const [copied, setCopied] = useState(false);
   const until = profile?.premium_until ? new Date(profile.premium_until) : null;
+  const lifetime = !!until && until.getFullYear() > 2090;
+  const price = plan === 'monthly' ? PREMIUM.price : PREMIUM.lifetimePrice;
 
-  async function subscribe() {
+  async function pay() {
     if (!session) return router.push('/inscription');
-    if (!PREMIUM.paymentLink) {
-      return Linking.openURL(
-        `mailto:${LEGAL.contactEmail}?subject=${encodeURIComponent('Abonnement Premium Envie')}&body=${encodeURIComponent(`Bonjour, je souhaite passer Premium. Mon pseudo : ${profile?.username ?? ''}`)}`,
-      ).catch(() => {});
-    }
-    const email = session.user.email ? `?prefilled_email=${encodeURIComponent(session.user.email)}` : '';
-    await WebBrowser.openBrowserAsync(`${PREMIUM.paymentLink}${email}`);
+    await WebBrowser.openBrowserAsync(paypalLink(plan === 'monthly' ? PREMIUM.monthlyAmount : PREMIUM.lifetimeAmount));
+  }
+
+  async function copyName() {
+    if (Platform.OS === 'web') await navigator.clipboard?.writeText(profile?.username ?? '').catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -41,22 +48,56 @@ export default function Premium() {
         <PremiumBadge />
         <Text style={styles.title}>Envie Premium</Text>
         <Text style={styles.subtitle}>Encore plus d’idées, tes stats perso et des collections sans limite.</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-          <Text style={styles.price}>{PREMIUM.price}</Text>
-          <Text style={styles.per}>/ {PREMIUM.period} · sans engagement</Text>
-        </View>
         {premium ? (
           <View style={styles.active}>
             <Text style={styles.activeText}>
               {profile?.is_admin
                 ? '🛡️ Premium offert à vie (administrateur)'
-                : `✅ Premium actif${until ? ` jusqu’au ${until.toLocaleDateString('fr-FR')}` : ''}`}
+                : lifetime
+                  ? '✅ Premium à vie activé. Merci !'
+                  : `✅ Premium actif${until ? ` jusqu’au ${until.toLocaleDateString('fr-FR')}` : ''}`}
             </Text>
           </View>
         ) : (
-          <Button label={session ? `Passer Premium · ${PREMIUM.price}/${PREMIUM.period}` : 'Créer un compte pour commencer'} icon="star" onPress={subscribe} />
+          <>
+            <View style={styles.plans}>
+              <PlanCard selected={plan === 'monthly'} onPress={() => setPlan('monthly')} name="📅 Mensuel" price={PREMIUM.price} detail="par mois" />
+              <PlanCard
+                selected={plan === 'lifetime'}
+                onPress={() => setPlan('lifetime')}
+                name="💎 À vie"
+                price={PREMIUM.lifetimePrice}
+                detail="une seule fois, pour toujours"
+                tag="Meilleure offre"
+              />
+            </View>
+            <Button
+              label={session ? `Payer ${price} avec PayPal` : 'Créer un compte pour commencer'}
+              icon={session ? 'external-link' : 'user-plus'}
+              onPress={pay}
+            />
+          </>
         )}
       </LinearGradient>
+
+      {!premium && (
+        <Card>
+          <Text style={text.strong}>💳 Comment ça marche ?</Text>
+          <Text style={text.muted}>1️⃣ Paie {price} sur PayPal (paypal.me/{PREMIUM.paypal}).</Text>
+          <Text style={text.muted}>
+            2️⃣ Écris ton pseudo dans le message du paiement :{' '}
+            <Text style={styles.pseudo} onPress={copyName}>
+              {profile?.username ?? 'ton pseudo'}
+            </Text>
+            {copied ? <Text style={{ color: colors.good }}> (copié)</Text> : null}
+          </Text>
+          <Text style={text.muted}>3️⃣ Ton Premium est activé dès réception, en général sous 24 h.</Text>
+          {plan === 'monthly' && (
+            <Text style={text.small}>Le mensuel n’est pas prélevé automatiquement : il se règle à nouveau chaque mois.</Text>
+          )}
+          <Button label="Conditions de vente" variant="ghost" small onPress={() => router.push('/legal/cgv')} style={{ alignSelf: 'flex-start' }} />
+        </Card>
+      )}
 
       <View style={{ gap: 10 }}>
         {FEATURES.map(([emoji, name, desc]) => (
@@ -69,16 +110,36 @@ export default function Premium() {
           </View>
         ))}
       </View>
-
-      <Card>
-        <Text style={text.strong}>Comment ça marche ?</Text>
-        <Text style={text.muted}>
-          Le paiement est sécurisé par Stripe : Envie ne voit jamais ta carte. L’abonnement se renouvelle chaque mois et se résilie à tout moment, sans frais.
-          {!PREMIUM.paymentLink ? ' Le paiement en ligne arrive bientôt : en attendant, écris-nous et l’admin active ton Premium.' : ''}
-        </Text>
-        <Button label="Conditions de vente" variant="ghost" small onPress={() => router.push('/legal/cgv')} style={{ alignSelf: 'flex-start' }} />
-      </Card>
     </ScrollView>
+  );
+}
+
+function PlanCard({
+  selected,
+  onPress,
+  name,
+  price,
+  detail,
+  tag,
+}: {
+  selected: boolean;
+  onPress: () => void;
+  name: string;
+  price: string;
+  detail: string;
+  tag?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      style={({ pressed }) => [styles.plan, selected && styles.planOn, pressed && { opacity: 0.85 }]}>
+      {tag && <Text style={styles.planTag}>⭐ {tag}</Text>}
+      <Text style={styles.planName}>{name}</Text>
+      <Text style={styles.planPrice}>{price}</Text>
+      <Text style={styles.per}>{detail}</Text>
+    </Pressable>
   );
 }
 
@@ -87,7 +148,13 @@ const styles = StyleSheet.create({
   hero: { borderRadius: radius.lg, padding: 22, gap: 12, borderWidth: 1, borderColor: '#F59E0B55' },
   title: { fontFamily: fonts.bold, color: '#FDE68A', fontSize: 32, letterSpacing: -1 },
   subtitle: { fontFamily: fonts.regular, color: '#E7E0D2', fontSize: 15.5, lineHeight: 22 },
-  price: { fontFamily: fonts.bold, color: '#fff', fontSize: 40, letterSpacing: -1 },
+  plans: { flexDirection: 'row', gap: 10 },
+  plan: { flex: 1, borderRadius: radius.md, borderWidth: 1.5, borderColor: '#F59E0B44', padding: 14, gap: 3, backgroundColor: 'rgba(0,0,0,0.25)' },
+  planOn: { borderColor: '#FBBF24', backgroundColor: 'rgba(251,191,36,0.12)' },
+  planTag: { fontFamily: fonts.bold, color: '#FBBF24', fontSize: 11.5 },
+  planName: { fontFamily: fonts.bold, color: '#FDE68A', fontSize: 14 },
+  planPrice: { fontFamily: fonts.bold, color: '#fff', fontSize: 30, letterSpacing: -1 },
+  pseudo: { fontFamily: fonts.bold, color: colors.accent, textDecorationLine: 'underline' },
   per: { fontFamily: fonts.medium, color: '#D6CFC0', fontSize: 14 },
   active: { backgroundColor: '#14301F', borderRadius: radius.md, padding: 12, borderWidth: 1, borderColor: '#4ADE8055' },
   activeText: { fontFamily: fonts.bold, color: colors.good, fontSize: 14.5 },

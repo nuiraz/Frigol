@@ -68,15 +68,15 @@ export const LEGAL_PAGES: Record<string, LegalPage> = {
     sections: [
       {
         heading: '1. Offre',
-        body: `${APP_NAME} Premium est un abonnement mensuel à ${PREMIUM.price} TTC par ${PREMIUM.period}, qui débloque : 5 idées d’un coup, filtres avancés, collections illimitées, « Mon bilan », journal privé, export de liste et badge Premium. L’usage de base d’${APP_NAME} reste gratuit.`,
+        body: `${APP_NAME} Premium existe en deux formules : mensuelle à ${PREMIUM.price} TTC par ${PREMIUM.period}, ou à vie à ${PREMIUM.lifetimePrice} TTC en un seul paiement. Il débloque : 5 idées d’un coup, filtres avancés, collections illimitées, « Mon bilan », journal privé, export de liste et badge Premium. L’usage de base d’${APP_NAME} reste gratuit.`,
       },
       {
         heading: '2. Paiement',
-        body: 'Le paiement est réalisé par carte bancaire via Stripe, prestataire de paiement sécurisé. Aucune donnée bancaire n’est conservée par Envie. L’abonnement est prélevé à la souscription puis chaque mois à la même date.',
+        body: `Le paiement se fait via PayPal (paypal.me/${PREMIUM.paypal}), en indiquant ton pseudo dans le message. Envie ne reçoit jamais tes données bancaires. Le Premium est activé à réception du paiement, en général sous 24 h. La formule mensuelle n’est pas prélevée automatiquement : elle se règle à nouveau chaque mois pour être prolongée.`,
       },
       {
-        heading: '3. Durée et résiliation',
-        body: 'L’abonnement est sans engagement : tu peux le résilier à tout moment depuis le lien reçu par e-mail de Stripe ou en écrivant au contact ci-dessous. Il reste actif jusqu’à la fin de la période déjà payée, sans renouvellement.',
+        heading: '3. Durée',
+        body: 'Mensuel : un mois à compter de l’activation, sans engagement ni renouvellement automatique. À vie : sans limite de durée, tant que le service existe.',
       },
       {
         heading: '4. Droit de rétractation',
@@ -98,7 +98,7 @@ export const LEGAL_PAGES: Record<string, LegalPage> = {
           '• Compte : adresse e-mail, mot de passe (chiffré par Supabase, jamais visible), pseudo, avatar et bio.\n' +
           '• Activité : tes avis, notes, commentaires, likes, signalements et ta liste « À faire / Déjà fait ».\n' +
           '• Sur ton appareil : ta session et ta liste sont enregistrées localement pour fonctionner hors connexion.\n' +
-          '• Premium : la date de fin d’abonnement. Le paiement est géré par Stripe, qui traite tes données bancaires ; Envie ne les reçoit jamais.',
+          '• Premium : la date de fin d’abonnement. Le paiement passe par PayPal, qui traite tes données bancaires ; Envie ne les reçoit jamais.',
       },
       {
         heading: 'Pourquoi',

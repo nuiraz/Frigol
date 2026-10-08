@@ -46,12 +46,14 @@ export default function ProfileTab() {
                   <Text style={text.strong}>
                     {profile.is_admin
                       ? 'Offert à vie (admin)'
-                      : `Actif jusqu’au ${new Date(profile.premium_until ?? '').toLocaleDateString('fr-FR')}`}
+                      : new Date(profile.premium_until ?? '').getFullYear() > 2090
+                        ? 'Premium à vie'
+                        : `Actif jusqu’au ${new Date(profile.premium_until ?? '').toLocaleDateString('fr-FR')}`}
                   </Text>
                 </View>
               </Card>
             ) : (
-              <PremiumLock title="Passe à Envie Premium" text="5 idées d’un coup, filtres avancés, collections illimitées, ton bilan perso…" />
+              <PremiumLock title="Passe à Envie Premium" text="3,99 €/mois ou 10,99 € à vie : 5 idées d’un coup, filtres avancés, collections illimitées, ton bilan…" />
             )}
             <Menu>
               <MenuLink href="/bilan" icon="bar-chart-2" label="Mon bilan" />

@@ -25,7 +25,7 @@ export function PremiumLock({ title, text, compact }: { title: string; text?: st
           <Text style={styles.lockTitle}>{title}</Text>
           {!!text && <Text style={styles.lockText}>{text}</Text>}
           <Text style={styles.lockCta}>
-            Débloquer avec Premium · {PREMIUM.price}/{PREMIUM.period} →
+            Débloquer avec Premium · {PREMIUM.price}/{PREMIUM.period} ou {PREMIUM.lifetimePrice} à vie →
           </Text>
         </View>
       </LinearGradient>

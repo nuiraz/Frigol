@@ -60,7 +60,7 @@ export default function Admin() {
       <View style={styles.tabs}>
         {(
           [
-            ['reports', 'Signalements'],
+            ['reports', 'Signalés'],
             ['premium', 'Premium'],
             ['add', 'Ajouter'],
             ['items', 'Ajoutés'],
@@ -128,7 +128,7 @@ function PremiumAdmin() {
       const until = await adminSetPremium(name, months);
       setMsg({
         ok: true,
-        text: months > 0 ? `✨ ${name} est Premium jusqu’au ${new Date(until ?? '').toLocaleDateString('fr-FR')}` : `Premium retiré à ${name}.`,
+        text: months >= 1200 ? `✨ ${name} est Premium à vie` : months > 0 ? `✨ ${name} est Premium jusqu’au ${new Date(until ?? '').toLocaleDateString('fr-FR')}` : `Premium retiré à ${name}.`,
       });
       load();
     } catch (e) {
@@ -140,11 +140,14 @@ function PremiumAdmin() {
     <View style={{ gap: 14 }}>
       <Card>
         <Text style={text.strong}>Activer le Premium d’un membre</Text>
-        <Text style={text.muted}>Après un paiement Stripe (ou pour offrir le Premium). Toi, tu l’as gratuitement et à vie.</Text>
+        <Text style={text.muted}>
+          Après un paiement PayPal (le pseudo est dans le message) : « + 1 mois » pour 3,99 €, « À vie » pour 10,99 €. Toi, tu l’as gratuitement et à vie.
+        </Text>
         <Input value={username} onChangeText={setUsername} placeholder="Pseudo du membre" autoCapitalize="none" />
         <Row>
           <Button label="+ 1 mois" small disabled={!username.trim()} onPress={() => grant(username, 1)} />
           <Button label="+ 12 mois" small variant="secondary" disabled={!username.trim()} onPress={() => grant(username, 12)} />
+          <Button label="À vie" small variant="secondary" disabled={!username.trim()} onPress={() => grant(username, 1200)} />
           <Button label="Retirer" small variant="ghost" disabled={!username.trim()} onPress={() => grant(username, 0)} />
         </Row>
         <Message text={msg?.text ?? null} ok={msg?.ok} />
@@ -155,7 +158,13 @@ function PremiumAdmin() {
           <Text style={{ fontSize: 22 }}>{m.avatar}</Text>
           <View style={{ flex: 1 }}>
             <Text style={text.strong}>{m.username}</Text>
-            <Text style={text.small}>jusqu’au {new Date(m.premium_until ?? '').toLocaleDateString('fr-FR')}</Text>
+            <Text style={text.small}>
+              {!m.premium_until
+                ? 'Premium'
+                : new Date(m.premium_until).getFullYear() > 2090
+                  ? '✨ à vie'
+                  : `jusqu’au ${new Date(m.premium_until).toLocaleDateString('fr-FR')}`}
+            </Text>
           </View>
           <Button label="+1 mois" small variant="secondary" onPress={() => grant(m.username, 1)} />
         </View>
@@ -323,7 +332,7 @@ const styles = StyleSheet.create({
   stat: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   statValue: { fontFamily: fonts.bold, color: colors.text, fontSize: 22 },
   tabs: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: colors.border },
-  tab: { flex: 1, textAlign: 'center', fontFamily: fonts.medium, color: colors.muted, fontSize: 13, paddingVertical: 10, borderRadius: 10, overflow: 'hidden' },
+  tab: { flex: 1, textAlign: 'center', fontFamily: fonts.medium, color: colors.muted, fontSize: 12, paddingVertical: 10, paddingHorizontal: 2, borderRadius: 10, overflow: 'hidden' },
   tabOn: { backgroundColor: colors.surfaceAlt, color: colors.text, fontFamily: fonts.bold },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, padding: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
 });
