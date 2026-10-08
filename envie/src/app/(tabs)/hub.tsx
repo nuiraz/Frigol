@@ -27,13 +27,15 @@ export default function Hub() {
   const { liked, toggle } = useLikes(reviews, setReviews);
 
   const load = useCallback(async () => {
+    // Le classement ne doit pas empêcher d'afficher les avis (et inversement).
+    topScores(40)
+      .then(setTop)
+      .catch(() => setTop([]));
     try {
       setError(null);
-      const [list, best] = await Promise.all([listReviews({ order, type, limit: 50 }), topScores(40)]);
-      setReviews(list);
-      setTop(best);
-    } catch {
-      setError('Impossible de charger le hub. Vérifie ta connexion (ou que la base Supabase est bien configurée).');
+      setReviews(await listReviews({ order, type, limit: 50 }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
       setRefreshing(false);

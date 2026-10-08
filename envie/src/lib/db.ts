@@ -26,8 +26,22 @@ export type Score = { item_id: string; average: number; reviews: number };
 
 const REVIEW = '*,profiles(id,username,avatar,is_admin)';
 
-function check<T>(res: { data: T; error: { message: string } | null }): T {
-  if (res.error) throw new Error(res.error.message);
+/** Explique les erreurs de base les plus courantes (script SQL pas lancé, droits manquants…). */
+export function dbError(e: { message?: string; code?: string; hint?: string | null } | null | undefined): string {
+  const msg = e?.message ?? 'Erreur inconnue';
+  if (e?.code === '42P01' || e?.code === 'PGRST205' || /does not exist|could not find the table/i.test(msg))
+    return `La base n’est pas prête : lance supabase/schema.sql dans Supabase → SQL Editor. (${msg})`;
+  if (e?.code === '42501' || /permission denied/i.test(msg))
+    return `Droits manquants : relance supabase/schema.sql en entier dans Supabase → SQL Editor. (${msg})`;
+  if (e?.code === 'PGRST200' || /relationship/i.test(msg))
+    return `Lien entre tables introuvable : relance supabase/schema.sql. (${msg})`;
+  if (/failed to fetch|network/i.test(msg)) return 'Pas de connexion au serveur Supabase. Vérifie ta connexion internet.';
+  if (/invalid api key|no api key/i.test(msg)) return `Clé Supabase refusée : vérifie EXPO_PUBLIC_SUPABASE_ANON_KEY. (${msg})`;
+  return msg;
+}
+
+function check<T>(res: { data: T; error: { message: string; code?: string } | null }): T {
+  if (res.error) throw new Error(dbError(res.error));
   return res.data;
 }
 

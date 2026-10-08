@@ -221,3 +221,20 @@ create table if not exists public.saved_items (
 alter table public.saved_items enable row level security;
 drop policy if exists "ma liste" on public.saved_items;
 create policy "ma liste" on public.saved_items for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- ---------------------------------------------------------------- Droits d'accès de l'app
+-- Les projets Supabase récents n'ouvrent plus automatiquement les nouvelles tables à l'app :
+-- on donne les droits explicitement (les règles RLS ci-dessus restent appliquées).
+grant usage on schema public to anon, authenticated;
+grant select on public.profiles, public.items, public.artwork, public.reviews, public.review_likes,
+  public.review_comments, public.item_scores to anon, authenticated;
+grant insert on public.artwork, public.reviews, public.review_likes, public.review_comments,
+  public.review_reports to authenticated;
+grant delete on public.reviews, public.review_likes, public.review_comments, public.review_reports,
+  public.artwork to authenticated;
+grant select on public.review_reports to authenticated;
+grant select, insert, update, delete on public.items, public.saved_items to authenticated;
+grant execute on function public.is_admin() to anon, authenticated;
+
+-- Recharge le schéma de l'API pour que les nouvelles tables soient visibles tout de suite.
+notify pgrst, 'reload schema';
