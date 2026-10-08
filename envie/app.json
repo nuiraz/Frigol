@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Envie",
+    "slug": "envie",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "envie",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0B12",
+    "ios": {
+      "bundleIdentifier": "com.nuiraz.envie",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.nuiraz.envie",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0B12",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "Envie",
+      "shortName": "Envie",
+      "themeColor": "#0B0B12",
+      "backgroundColor": "#0B0B12",
+      "lang": "fr"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-audio",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0B12",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

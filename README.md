@@ -1,7 +1,7 @@
-# 🎮 Ludothèque
+# 🎲 Envie
 
-Hub communautaire de jeux vidéo : connecte tes comptes Steam, PlayStation et Xbox, retrouve tous tes jeux et succès, note les jeux et partage tes avis.
+Tu as envie de quoi ? Film, série, jeu vidéo ou musique : l’app te trouve une idée, puis tu la notes sur le hub communautaire.
 
-👉 **Site : https://nuiraz.github.io/Frigol/hub/**
+👉 **Site : https://nuiraz.github.io/Frigol/app/**
 
-Le code est dans [`ludotheque/`](ludotheque/) — voir [ludotheque/README.md](ludotheque/README.md) pour la mise en route (Supabase, clé Steam, fonction serveur).
+Le code est dans [`envie/`](envie/) — voir [envie/README.md](envie/README.md) pour la mise en route.
